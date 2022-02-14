@@ -8,98 +8,158 @@ import torch as tr
 # tr.cuda.get_device_name(0)
 
 
-def e(close_t: float, close_t_minus_1: float) -> tr.Tensor:
-    """
-    e(10.75, 11).item()
-    >> -0.02298949658870697
-    """
-    return tr.log(tr.tensor(close_t)/tr.tensor(close_t_minus_1))
+class Agent:
+
+    @staticmethod
+    def init_wk(N: int, initType: str = "uniform") -> tr.Tensor:
+        """
+        Initializing weight vector wk...
+        """
+        if initType == "uniform":
+            return tr.Tensor(N + 2).uniform_(-1).unsqueeze(dim=1)
+        elif initType == "test":
+            return tr.Tensor([-0.2, 0.2, 0.4, -0.4, -0.1]).unsqueeze(dim=1)
+        else:
+            raise ValueError(f"ERROR: initType {initType} not recognized...")
+
+    @staticmethod
+    def featureGeneration(previousPrice: tr.Tensor,
+                          currentPrice: tr.Tensor) -> tr.Tensor:
+        """Computing a feature..."""
+        return tr.log(currentPrice/previousPrice)
+
+    @staticmethod
+    def basis(x: float, a: float = 2, b: float = 1, c: float = 10**15,
+              d: float = -1) -> float:
+        """Basis function."""
+        return (a / (1 + b * np.exp(-c * x))) - d
+
+    @staticmethod
+    def rewardFunction(Gtplus1, rewardType):
+        """Reward function."""
+        if rewardType == "shapeRatio":
+            return np.mean(Gtplus1) / np.sqrt(np.var(Gtplus1))
+        else:
+            raise ValueError(f"ERROR: rewardType {rewardType} "
+                             f"not recognized...")
+
+    def __init__(self, N, initType="uniform", rewardType="shapeRatio",
+                 seed=0):
+
+        # agent's parameters
+        self.N = N
+        self.initType = initType
+        self.rewardType = rewardType
+        self.seed = seed
+
+        # seeding the experiment
+        if seed != 0:
+            tr.manual_seed(self.seed)
+
+        # initialization of a column vector for weights
+        self.w = self.init_wk(
+            N=self.N,
+            initType=self.initType
+        )
+
+        # initialization of a column vector for features
+        # alternative for .unsqueeze(dim=1) = [:, None] = .reshape(-1, 1)
+        self.phi = tr.Tensor(
+            [1.0] + [0.0 for _ in range(self.N + 1)]
+        ).unsqueeze(dim=1)
+
+        self.numEpisodes = 0
+
+        self.A = {0, 1, 2}
+        self.tradingStatus = 0
+        self.Q = tr.zeros(1, 3, dtype=tr.float32)
+        self.At = 0
+
+        self.St = tr.FloatTensor(self.N)
+        self.Stplus1 = tr.FloatTensor(self.N)
+
+        self.Rtplus1 = 0
+        self.Gtplus1 = 0
+        self.Atminus1 = 0
+
+    def run(self, Rtplus1, Stplus1: tr.Tensor, tradingExe: bool) -> int:
+        if not isinstance(Stplus1, tr.Tensor):
+            raise ValueError("ERROR: Stplus1 variable must be tensor.")
+
+        if tradingExe:  # fix
+            self.tradingStatus = self.At
+
+        # updating weights step...
+        if self.numEpisodes != 0:
+            pass
+
+        # computing the features
+        for i in range(1, self.N + 1):
+            self.phi[i, 0] = self.featureGeneration(
+                previousPrice=Stplus1[i-1, 0],
+                currentPrice=Stplus1[i, 0]
+            )
+
+        # computing q-value
+        for a in self.A:
+            self.phi[-1, 0] = a
+
+            for i in range(self.w.shape[0]):
+                self.Q[0, a] += \
+                    self.w[i, 0].item() * self.basis(x=self.phi[i, 0].item())
+
+        # e-greedy step...
+        # not allowing the algorithm to double position
+        rho = 0  # do nothing as default
+        if self.tradingStatus == 0:    # neutron
+            rho = tr.argmax(self.Q).item()
+
+        elif self.tradingStatus == 1:  # long
+            if tr.argmax(self.Q).item() == 1:
+                rho = 0
+            else:
+                rho = tr.argmax(self.Q).item()
+
+        elif self.tradingStatus == 2:  # short
+            if tr.argmax(self.Q).item() == 2:
+                rho = 0
+            else:
+                rho = tr.argmax(self.Q).item()
+
+        self.At = rho
+        self.numEpisodes += 1
+
+        return rho
 
 
-def phi(x: tr.FloatTensor, a: int = 2, b: int = 1, c: float = 10**15, d=-1) \
-        -> tr.FloatTensor:
-    """
-    phi(0.5).item()
-    >> 3
-
-    phi(0).item()
-    >> 2
-
-    phi(-0.5).item()
-    >> 1
-    """
-    cx = - tr.FloatTensor([c]) * x
-    denum = tr.FloatTensor([1]) + tr.FloatTensor([b]) * tr.exp(cx)
-    return (tr.FloatTensor([a]) / denum) - tr.FloatTensor([d])
-
-
-def getSt(priceIn: list, atminus1: float, N: int) -> tr.Tensor:
-    # st_list = [1.0]
-    st_list = [e(priceIn[-i], priceIn[-i-1]).item()
-               for i in reversed(range(1, N+1))]
-    st_list += [atminus1]
-    return tr.FloatTensor(st_list)
-
-
-def init_wk(stts: tr.Tensor, initType: str = "uniform") -> tr.Tensor:
-    """
-    Initializing weight vector wk.
-    """
-    if initType == "uniform":
-        return tr.FloatTensor([stts.shape[0]+1]).uniform_(-1, 1)
-    else:
-        raise ValueError(f"ERROR: initType {initType} not recognized...")
-
-
-def actionFunction(status: tr.Tensor) -> tr.Tensor:
-    """
-    Checking last action and returning the possible actions.
-    """
-    if status[-1].item() == 0.:
-        return tr.IntTensor([-1, 0, 1])
-
-    elif status[-1].item() == -1.:
-        return tr.IntTensor([0, 1])
-
-    elif status[-1].item() == 1.:
-        return tr.IntTensor([-1, 0])
-
-    else:
-        raise ValueError(f"ERROR: Status {status[-1].item()} "
-                         f"not recognized...")
-
-
-def estimateQ(St: tr.FloatTensor, at: tr.FloatTensor, wk: tr.FloatTensor) \
-        -> tr.FloatTensor:
-    r"""
-    Calculating the state-action value.
-
-    Formula:
-    ~~~~~~~~~~~~~~~~~~~~
-    Q(S_{t}, a_{t}, \overrightarrow{w}_{k}) = w_{k_{0}}
-    + \sum_{n=1}^{N} w_{k_{n}} phi(s_{t_{n}}) + w_{k_{N}} phi(a_{t})
-    """
-    qt = wk[0].item()
-
-    for idx, s in enumerate(St):
-        qt += wk[idx+1].item() * phi(x=s).item()
-
-    qt += wk[-1].item() * phi(x=at).item()
-
-    return tr.FloatTensor([qt])
+class Environment:
+    def __init__(self, st, at):
+        self.st = st
+        self.at = at
 
 
 if __name__ == '__main__':
-    # initializing weight vector wk
-    wk = tr.FloatTensor([-0.2, 0.2, 0.4, -0.4, -0.1, 0.1])
 
-    # initializing state vector St
-    close = [10.00, 10.25, 10.50, 11.25]  # , 11.75, 12.00, 11.00, 10.75]
-    St = getSt(close, 0, 3)
+    database = tr.Tensor(
+        [
+            [10.00],
+            [10.25],
+            [10.50],
+            [11.25],
+            [11.75],
+            [12.00],
+            [11.00],
+            [10.75]]
+    )
 
-    # checking last action and returning the possible actions
-    actionSpace = actionFunction(status=St)
+    agent = Agent(
+        N=3,
+        initType="test",
+        rewardType="shapeRatio"
+    )
 
-    qt = []
-    for at in actionSpace:
-        qt.append(estimateQ(St, at, wk))
+    rho = agent.run(
+        Rtplus1=0,
+        Stplus1=database[:4, 0].unsqueeze(dim=1),
+        tradingExe=False
+    )

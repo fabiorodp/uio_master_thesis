@@ -49,9 +49,8 @@ def test_agent_featureGeneration():
     )
 
     agent.run(
-        Rtplus1=0,
         Stplus1=database[:4, 0].reshape(-1, 1),
-        tradingExe=False
+        wasExecuted=False
     )
 
     # 1st test: if the feature vector phi is a column vector.

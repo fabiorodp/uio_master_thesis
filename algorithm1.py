@@ -146,12 +146,12 @@ class Agent:
         # agent's parameters
         self.env = env
         self.n = n
-        self.eta = eta  # learning rate
-        self.gamma = gamma  # discount factor
-        self.epsilon = epsilon  # epsilon for e-greedy policy
-        self.initType = initType  # init for w, b, f
-        self.rewardType = rewardType  # for reward function
-        self.algoType = algoType  # sarsa, ql, or g-ql
+        self.eta = eta                          # learning rate
+        self.gamma = gamma                      # discount factor
+        self.epsilon = epsilon                  # epsilon for e-greedy policy
+        self.initType = initType                # init for w, b, f
+        self.rewardType = rewardType            # for reward function
+        self.algoType = algoType                # sarsa, ql, or g-ql
 
         # seeding the experiment
         if seed != 0:

@@ -164,16 +164,15 @@ class Agent:
             np.random.seed(self.seed)
             tr.manual_seed(self.seed)
 
-        # sets
+        # variables
         self.spaceA = [-1, 0, 1]
         self.S = 0
         self.minusA, self.A = 0, 0
-        self.R, self.lineR = 0, 0
+        self.R, self.primeR, self.lineR = 0, 0, 0
         self.Q, self.nablaQ = 0, 0
         self.zeroVector = tr.zeros((1, n + 1), dtype=tr.double)
         self.randEpsilon = 0
-
-        # variables that must be checked in every run
+        self.delta = 0                              # TD-error
         self.t, self.tau = 1, 0
         self.d = len(self.spaceA) * (self.n + 1)
 
@@ -182,6 +181,24 @@ class Agent:
             self.w = tr.zeros((self.d, 1), dtype=tr.double)
         else:
             raise ValueError("ERROR: initType not recognized!")
+
+        # self.memoryBase = pd.DataFrame(columns=[1, 2])
+        # col = ["open", "high", "low", "close", "volume", "minusA",
+        #        "A", "lineR", "primeR", "Q", "nablaQ", "primeO",
+        #        "primeH", "primeL", "primeC", "primeV"]
+        # colIdx = [i for i in range(len(col))]
+        """self.memory = {
+            "open": {}, "high": {}, "low": {}, "close": {}, "volume": {},
+            "minusA": {}, "A": {}, "lineR": {}, "primeR": {}, "Q": {},
+            "nablaQ": {}
+        }"""
+        self.memory = pd.DataFrame(
+            columns=['open', 'high', 'low', 'close', 'volume',
+                     'minusA', 'A', 'tau', 'lineR', 'R', 'primeR',
+                     'optQ', 'TD-error']
+        )
+        self.memoryW = None
+        self.memoryNablaQ = None
 
     def getBasisVector(self, S, minusA, lineR):
         b = tr.zeros((1, self.n + 1), dtype=tr.double)
@@ -260,7 +277,7 @@ class Agent:
                 Q[a] = (self.w.T @ f).item()
                 nablaQ[a] = f
 
-            argmax = max(Q, key=Q.get)
+            argmax = max(Q, key=Q.get)  # TODO: maybe it is choosing the wrong one when even
             maxQ = max(Q.values())
             return argmax, maxQ, nablaQ[argmax]
 
@@ -285,11 +302,89 @@ class Agent:
             raise ValueError(f"ERROR: rewardType {self.rewardType} "
                              f"not recognized.")
 
+    def updateMemory(self, minusA, A, lineR, R, primeR, Q, nablaQ):
+        key = ["minusA", "A", "lineR", "R", "primeR", "optQ"]
+        val = [minusA, A, lineR, R, primeR, Q]
+
+        for k, v in zip(key, val):
+            self.memory[k][-1] = v
+
+        if self.memoryW is None:
+            mem = self.w.T.tolist()
+            df = pd.DataFrame(mem)
+            df.index = [self.memory.index[-1]]
+            self.memoryW = df
+
+        else:
+            mem = self.w.T.tolist()
+            df = pd.DataFrame(mem)
+            df.index = [self.memory.index[-1]]
+            self.memoryW = self.memoryW.concat(
+                [self.memoryW, df], axis=0)
+
+        if self.memoryNablaQ is None:
+            mem = nablaQ.T.tolist()
+            df = pd.DataFrame(mem)
+            df.index = [self.memory.index[-1]]
+            self.memoryNablaQ = df
+
+        else:
+            mem = nablaQ.T.tolist()
+            df = pd.DataFrame(mem)
+            df.index = [self.memory.index[-1]]
+            self.memoryNablaQ = self.memoryNablaQ.concat(
+                [self.memoryNablaQ, df], axis=0)
+
+    def saveMemory(self, dfS, minusA, A, tau, lineR, R, primeR, Q, delta, nablaQ):
+        col = dfS.columns.to_list()
+        extCols = ["minusA", "A", "tau", "lineR", "R", "primeR",
+                   "optQ", "TD-error"]
+        keys = col+extCols
+
+        val1 = [dfS[k][-1] for k in dfS.keys().to_list()]
+        val2 = [minusA, A, tau, lineR, R, primeR, Q, delta]
+        vals = val1+val2
+
+        timeIdx= dfS.index.to_list()[-1]
+
+        memory = pd.DataFrame(vals).T
+        self.mem = memory
+        memory.columns = keys
+        memory.index = [timeIdx]
+
+        self.memory = pd.concat([self.memory, memory], axis=0)
+
+        if self.memoryW is None:
+            mem = self.w.T.tolist()
+            df = pd.DataFrame(mem)
+            df.index = [self.memory.index.to_list()[-1]]
+            self.memoryW = df
+
+        else:
+            mem = self.w.T.tolist()
+            df = pd.DataFrame(mem)
+            df.index = [self.memory.index.to_list()[-1]]
+            self.memoryW = self.memoryW.concat(
+                [self.memoryW, df], axis=0)
+
+        if self.memoryNablaQ is None:
+            mem = nablaQ.T.tolist()
+            df = pd.DataFrame(mem)
+            df.index = [self.memory.index.to_list()[-1]]
+            self.memoryNablaQ = df
+
+        else:
+            mem = nablaQ.T.tolist()
+            df = pd.DataFrame(mem)
+            df.index = [self.memory.index.to_list()[-1]]
+            self.memoryNablaQ = self.memoryNablaQ.concat(
+                [self.memoryNablaQ, df], axis=0)
+
     def run(self):
 
         if self.t == 1:
-            S, A = self.env.getCurrentState(), self.A
-            S = tr.from_numpy(S.values[:, 3])[:, None]
+            dfS, A = self.env.getCurrentState(), self.A
+            S = tr.from_numpy(dfS.values[:, 3])[:, None]
 
             f = self.getFeatureVector(
                 S=S,                        # current state
@@ -297,30 +392,60 @@ class Agent:
                 minusA=self.minusA,         # action t-1
                 lineR=self.lineR            # current trade profit
             )
+
             Q = (self.w.T @ f).item()
             nablaQ = f
+
+            self.saveMemory(
+                dfS=dfS,
+                minusA=self.minusA,
+                A=A,
+                tau=self.tau,
+                lineR=self.lineR,
+                R=self.R,
+                primeR=self.primeR,
+                Q=Q,
+                delta=self.delta,
+                nablaQ=nablaQ
+            )
 
         else:
             S, A, Q, nablaQ = self.S, self.A, self.Q, self.nablaQ
 
-        primeS, primeR, entryPrice, self.lineR, self.tau, self.minusA = \
+        dfPrimeS, primeR, entryPrice, self.lineR, self.tau, self.minusA = \
             self.env.getNextState(A)
 
-        primeS = tr.from_numpy(primeS.values[:, 3])[:, None]
+        self.dfPrimeS = dfPrimeS
+
+        primeS = tr.from_numpy(dfPrimeS.values[:, 3])[:, None]
 
         primeA, primeQ, primeNablaQ = self.epsilonGreedyPolicy(
             S=primeS,
             As=self.spaceAs()
         )
 
-        delta = primeR + self.gamma * primeQ - Q            # TD-error
-        self.delta = delta
-        self.w += self.eta * delta * nablaQ                 # weight
+        delta = primeR + primeQ - Q                 # TD-error
+        print(f"Loss {delta}")
+        self.w += self.eta * delta * nablaQ         # weight
+
+        self.saveMemory(
+            dfS=primeS,
+            minusA=self.minusA,
+            A=primeA,
+            tau=self.tau,
+            lineR=self.lineR,
+            R=self.R,
+            primeR=primeR,
+            Q=primeQ,
+            delta=delta,
+            nablaQ=primeNablaQ
+        )
 
         self.t += 1
         self.S = primeS
         self.A = primeA
         self.Q, self.nablaQ = primeQ, primeNablaQ
+        self.delta = delta
         self.R = primeR
 
 
@@ -328,7 +453,7 @@ if __name__ == '__main__':
     agent = Agent(
         env=Environment(n=2),
         n=2,
-        eta=0.05,
+        eta=0.001,
         gamma=0.95,
         epsilon=0.1,
         initType="zeros",

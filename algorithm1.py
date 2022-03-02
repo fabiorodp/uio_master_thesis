@@ -37,7 +37,7 @@ class Environment:
                 if self.minusA == 0:    # new trade opened
                     self.minusA = -1
                     primeR = C - primeC
-                    entryPrice = primeC.iloc[-1 - (self.tau - 1), 3]
+                    entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
                     lineR = entryPrice - primeC
                     tau = self.tau
                     return primeS, primeR, entryPrice, lineR, tau, self.minusA
@@ -45,7 +45,7 @@ class Environment:
                 elif self.minusA == 1:  # current trade closed
                     self.minusA = 0
                     primeR = primeC - C
-                    entryPrice = primeC.iloc[-1 - (self.tau - 1), 3]
+                    entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
                     lineR = primeC - entryPrice
                     tau = self.tau
                     self.tau = 0
@@ -70,7 +70,7 @@ class Environment:
             elif self.minusA == -1:     # on a short trade
                 self.tau += 1
                 primeR = C - primeC
-                entryPrice = primeC.iloc[-1 - (self.tau - 1), 3]
+                entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
                 lineR = entryPrice - primeC
                 tau = self.tau
                 return primeS, primeR, entryPrice, lineR, tau, self.minusA
@@ -78,7 +78,7 @@ class Environment:
             elif self.minusA == 1:      # on a long trade
                 self.tau += 1
                 primeR = primeC - C
-                entryPrice = primeC.iloc[-1 - (self.tau - 1), 3]
+                entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
                 lineR = primeC - entryPrice
                 tau = self.tau
                 return primeS, primeR, entryPrice, lineR, tau, self.minusA
@@ -91,7 +91,7 @@ class Environment:
                 if self.minusA == 0:    # new trade opened
                     self.minusA = 1
                     primeR = primeC - C
-                    entryPrice = primeC.iloc[-1 - (self.tau - 1), 3]
+                    entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
                     lineR = primeC - entryPrice
                     tau = self.tau
                     return primeS, primeR, entryPrice, lineR, tau, self.minusA
@@ -99,7 +99,7 @@ class Environment:
                 elif self.minusA == -1:  # current trade closed
                     self.minusA = 0
                     primeR = C - primeC
-                    entryPrice = primeC.iloc[-1 - (self.tau - 1), 3]
+                    entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
                     lineR = entryPrice - primeC
                     tau = self.tau
                     self.tau = 0
@@ -300,6 +300,8 @@ class Agent:
         primeS, primeR, entryPrice, self.lineR, self.tau, self.minusA = \
             self.env.getNextState(A)
 
+        self.primeR = primeR
+
         primeS = tr.from_numpy(primeS.values[:, 3])[:, None]
 
         primeA, primeQ, primeNablaQ = self.epsilonGreedyPolicy(
@@ -307,15 +309,15 @@ class Agent:
             As=self.spaceAs()
         )
 
-        delta = primeR + self.gamma * primeQ - Q
-        self.w += self.eta * delta * nablaQ
+        delta = primeR + self.gamma * primeQ - Q            # TD-error
+        self.delta = delta
+        self.w += self.eta * delta * nablaQ                 # weight
 
         self.t += 1
-        self.tau += 1 if self.minusA != A else 0
-
         self.S = primeS
-        self.minusA, self.A = A, primeA
+        self.A = primeA
         self.Q, self.nablaQ = primeQ, primeNablaQ
+        self.R = primeR
 
 
 if __name__ == '__main__':

@@ -29,7 +29,7 @@ def get_instrument(ticker='PETR4', in_folder='data/',
                 filename.startswith('TradeIntraday_'):
             # importing data-set file
             data = pd.read_csv(in_folder + filename, compression='zip',
-                               sep=';', header=0, dtype=np.str)
+                               sep=';', header=0, dtype=str)
 
             # removing trades that were not for the selected ticker
             drop_idxs = data['TckrSymb'][data['TckrSymb'] != ticker].index
@@ -116,13 +116,13 @@ def create_candles(ticker='PETR4', candles_periodicity='1D',
 
 if __name__ == '__main__':
     get_instrument(
-        ticker='WINX21',
+        ticker='WINZ21',
         in_folder='data/',
         out_folder='data/'
     )
 
     create_candles(
-        ticker='PETR4',
+        ticker='WINZ21',
         candles_periodicity='1min',
         in_folder='data/',
         out_folder='data/'

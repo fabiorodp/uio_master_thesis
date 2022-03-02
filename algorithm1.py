@@ -166,6 +166,7 @@ class Agent:
         self.R, self.lineR = 0, 0
         self.Q, self.nablaQ = 0, 0
         self.zeroVector = tr.zeros((1, n + 1), dtype=tr.double)
+        self.randEpsilon = 0
 
         # variables that must be checked in every run
         self.t, self.tau = 1, 0
@@ -299,8 +300,6 @@ class Agent:
 
         primeS, primeR, entryPrice, self.lineR, self.tau, self.minusA = \
             self.env.getNextState(A)
-
-        self.primeR = primeR
 
         primeS = tr.from_numpy(primeS.values[:, 3])[:, None]
 

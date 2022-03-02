@@ -6,6 +6,11 @@ import torch as tr
 import pandas as pd
 from readData import get_instrument, create_candles
 
+import warnings
+
+# suppress warnings
+warnings.filterwarnings('ignore')
+
 
 class Environment:
 

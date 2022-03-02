@@ -277,7 +277,9 @@ class Agent:
                 Q[a] = (self.w.T @ f).item()
                 nablaQ[a] = f
 
-            argmax = max(Q, key=Q.get)  # TODO: maybe it is choosing the wrong one when even
+            argmax = max(Q, key=Q.get)
+            # TODO: maybe it is choosing the wrong one when even.
+
             maxQ = max(Q.values())
             return argmax, maxQ, nablaQ[argmax]
 
@@ -302,40 +304,9 @@ class Agent:
             raise ValueError(f"ERROR: rewardType {self.rewardType} "
                              f"not recognized.")
 
-    def updateMemory(self, minusA, A, lineR, R, primeR, Q, nablaQ):
-        key = ["minusA", "A", "lineR", "R", "primeR", "optQ"]
-        val = [minusA, A, lineR, R, primeR, Q]
+    def saveMemory(self, dfS, minusA, A, tau, lineR, R, primeR, Q,
+                   delta, nablaQ):
 
-        for k, v in zip(key, val):
-            self.memory[k][-1] = v
-
-        if self.memoryW is None:
-            mem = self.w.T.tolist()
-            df = pd.DataFrame(mem)
-            df.index = [self.memory.index[-1]]
-            self.memoryW = df
-
-        else:
-            mem = self.w.T.tolist()
-            df = pd.DataFrame(mem)
-            df.index = [self.memory.index[-1]]
-            self.memoryW = self.memoryW.concat(
-                [self.memoryW, df], axis=0)
-
-        if self.memoryNablaQ is None:
-            mem = nablaQ.T.tolist()
-            df = pd.DataFrame(mem)
-            df.index = [self.memory.index[-1]]
-            self.memoryNablaQ = df
-
-        else:
-            mem = nablaQ.T.tolist()
-            df = pd.DataFrame(mem)
-            df.index = [self.memory.index[-1]]
-            self.memoryNablaQ = self.memoryNablaQ.concat(
-                [self.memoryNablaQ, df], axis=0)
-
-    def saveMemory(self, dfS, minusA, A, tau, lineR, R, primeR, Q, delta, nablaQ):
         col = dfS.columns.to_list()
         extCols = ["minusA", "A", "tau", "lineR", "R", "primeR",
                    "optQ", "TD-error"]
@@ -348,10 +319,8 @@ class Agent:
         timeIdx= dfS.index.to_list()[-1]
 
         memory = pd.DataFrame(vals).T
-        self.mem = memory
         memory.columns = keys
         memory.index = [timeIdx]
-
         self.memory = pd.concat([self.memory, memory], axis=0)
 
         if self.memoryW is None:
@@ -364,8 +333,7 @@ class Agent:
             mem = self.w.T.tolist()
             df = pd.DataFrame(mem)
             df.index = [self.memory.index.to_list()[-1]]
-            self.memoryW = self.memoryW.concat(
-                [self.memoryW, df], axis=0)
+            self.memoryW = pd.concat([self.memoryW, df], axis=0)
 
         if self.memoryNablaQ is None:
             mem = nablaQ.T.tolist()
@@ -377,8 +345,7 @@ class Agent:
             mem = nablaQ.T.tolist()
             df = pd.DataFrame(mem)
             df.index = [self.memory.index.to_list()[-1]]
-            self.memoryNablaQ = self.memoryNablaQ.concat(
-                [self.memoryNablaQ, df], axis=0)
+            self.memoryNablaQ = pd.concat([self.memoryNablaQ, df], axis=0)
 
     def run(self):
 
@@ -415,8 +382,6 @@ class Agent:
         dfPrimeS, primeR, entryPrice, self.lineR, self.tau, self.minusA = \
             self.env.getNextState(A)
 
-        self.dfPrimeS = dfPrimeS
-
         primeS = tr.from_numpy(dfPrimeS.values[:, 3])[:, None]
 
         primeA, primeQ, primeNablaQ = self.epsilonGreedyPolicy(
@@ -426,10 +391,14 @@ class Agent:
 
         delta = primeR + primeQ - Q                 # TD-error
         print(f"Loss {delta}")
+
+        # TODO: primeR muito alto por causa de ser imediato.
+        #  Tentar shape ou log-return.
+
         self.w += self.eta * delta * nablaQ         # weight
 
         self.saveMemory(
-            dfS=primeS,
+            dfS=dfPrimeS,
             minusA=self.minusA,
             A=primeA,
             tau=self.tau,

@@ -24,7 +24,7 @@ params = {
 save = {
     "params": [],
     "histR": [],
-    "sumPL": []
+    "sumTradePL": []
 }
 
 fileName = "data/WING22/WING22_1min_OLHCV.csv"

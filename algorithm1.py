@@ -4,165 +4,75 @@
 import numpy as np
 import torch as tr
 import pandas as pd
-from readData import get_instrument, create_candles
+from environment1 import Environment
 
 import warnings
 
 # suppress warnings
-warnings.filterwarnings('ignore')
-
-
-class Environment:
-
-    def __init__(self, n, fileName="data/WINZ21_1min_OLHCV.csv"):
-        self.data = pd.read_csv(f"{fileName}", sep=";")
-        self.t = 1
-        self.n = n
-        self.minusA = 0
-        self.tau = 0
-        self.terminal = False
-        self.lenData = len(self.data)
-
-    def getCurrentState(self):
-        S = self.data.iloc[0: self.n + self.t, :]
-        self.terminal = True if len(S) == self.lenData else False
-        return S
-
-    def getNextState(self, A):
-        self.t += 1
-        S = self.data.iloc[0: self.n + self.t - 1, :]
-        primeS = self.data.iloc[0: self.n + self.t, :]
-
-        self.terminal = True if len(primeS) == self.lenData else False
-
-        C = S.iloc[-1, 3]
-        primeH = primeS.iloc[-1, 1]
-        primeL = primeS.iloc[-1, 2]
-        primeC = primeS.iloc[-1, 3]
-
-        if A == -1:                     # limit short
-
-            if primeH > C:              # short trade executed
-                self.tau += 1
-
-                if self.minusA == 0:    # new trade opened
-                    self.minusA = -1
-                    primeR = C - primeC
-                    entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
-                    lineR = entryPrice - primeC
-                    tau = self.tau
-                    return primeS, primeR, entryPrice, lineR, tau, self.minusA
-
-                elif self.minusA == 1:  # current trade closed
-                    self.minusA = 0
-                    primeR = primeC - C
-                    entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
-                    lineR = primeC - entryPrice
-                    tau = self.tau
-                    self.tau = 0
-                    return primeS, primeR, entryPrice, lineR, tau, self.minusA
-
-            else:                       # trade not executed
-                primeR = 0.0
-                entryPrice = 0.0
-                lineR = 0.0
-                tau = self.tau
-                return primeS, primeR, entryPrice, lineR, tau, self.minusA
-
-        elif A == 0:                    # do nothing
-
-            if self.minusA == 0:        # not on a trade
-                primeR = 0.0
-                entryPrice = 0.0
-                lineR = 0.0
-                tau = self.tau
-                return primeS, primeR, entryPrice, lineR, tau, self.minusA
-
-            elif self.minusA == -1:     # on a short trade
-                self.tau += 1
-                primeR = C - primeC
-                entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
-                lineR = entryPrice - primeC
-                tau = self.tau
-                return primeS, primeR, entryPrice, lineR, tau, self.minusA
-
-            elif self.minusA == 1:      # on a long trade
-                self.tau += 1
-                primeR = primeC - C
-                entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
-                lineR = primeC - entryPrice
-                tau = self.tau
-                return primeS, primeR, entryPrice, lineR, tau, self.minusA
-
-        elif A == 1:                    # limit long
-
-            if primeL < C:              # long trade executed
-                self.tau += 1
-
-                if self.minusA == 0:    # new trade opened
-                    self.minusA = 1
-                    primeR = primeC - C
-                    entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
-                    lineR = primeC - entryPrice
-                    tau = self.tau
-                    return primeS, primeR, entryPrice, lineR, tau, self.minusA
-
-                elif self.minusA == -1:  # current trade closed
-                    self.minusA = 0
-                    primeR = C - primeC
-                    entryPrice = primeS.iloc[-1 - (self.tau - 1), 3]
-                    lineR = entryPrice - primeC
-                    tau = self.tau
-                    self.tau = 0
-                    return primeS, primeR, entryPrice, lineR, tau, self.minusA
-
-            else:                       # trade not executed
-                primeR = 0.0
-                entryPrice = 0.0
-                lineR = 0.0
-                tau = self.tau
-                return primeS, primeR, entryPrice, lineR, tau, self.minusA
-
-        else:
-            raise ValueError(f"ERROR: A = {A} not recognized.")
+# warnings.filterwarnings('ignore')
 
 
 class Agent:
 
     @staticmethod
-    def l(previousPrice: tr.Tensor,
-          currentPrice: tr.Tensor) -> float:
+    def ln(currentPrice: tr.Tensor, previousPrice: tr.Tensor) -> float:
         """Computing a feature..."""
         return tr.log(currentPrice / previousPrice).item()
 
     @staticmethod
-    def basisFunction(x: float, a: float = 2, b: float = 1,
-                      c: float = 10 ** 15, d: float = -1) -> float:
+    def basisFunction(x: float, basisFctType: str = "hypTanh123") -> float:
         """Basis function."""
-        return (a / (1 + b * np.exp(-c * x))) - d
+        if basisFctType == "hypTanh123":
+            a, b, c, d = 2, 1, 10**15, -1
+            return (a / (1 + b * np.exp(-c * x))) - d
+
+        elif basisFctType == "hypTanh":
+            return np.tanh(x)
+
+        elif basisFctType == "relu":
+            return np.max([0, x])
+
+        elif basisFctType == "sigmoid":
+            return 1 / 1 + np.exp(-x)
+
+        else:
+            raise ValueError(f"basisFctType = {basisFctType} not recognized!")
 
     @staticmethod
     def rewardFunction(Gtplus1, rewardType):
         """Reward function."""
         if rewardType == "shapeRatio":
-            return np.mean(Gtplus1) / np.sqrt(np.var(Gtplus1))
+            r = np.mean(Gtplus1) / np.sqrt(np.var(Gtplus1))
+            r = 0 if np.isnan(r) else r
+            return r
+
+        elif rewardType == "mean":
+            return np.mean(Gtplus1)
+
+        elif rewardType == "sum":
+            return np.sum(Gtplus1)
+
         else:
             raise ValueError(f"ERROR: rewardType {rewardType} "
                              f"not recognized...")
 
     def __init__(self, env, n, eta=0.05, gamma=0.95, epsilon=0.1,
-                 initType="zeros", rewardType="immediate",
-                 algoType="QL", seed=0):
+                 initType="zeros", rewardType="shapeRatio",
+                 basisFctType="hypTanh123", typeFeatureVector="block",
+                 tradeRandEpsilon=False, verbose=False, seed=0):
 
         # agent's parameters
         self.env = env
-        self.n = n
-        self.eta = eta                          # learning rate
-        self.gamma = gamma                      # discount factor
-        self.epsilon = epsilon                  # epsilon for e-greedy policy
-        self.initType = initType                # init for w, b, f
-        self.rewardType = rewardType            # for reward function
-        self.algoType = algoType                # sarsa, ql, or g-ql
+        self.n = n                          # conjugated states
+        self.eta = eta                      # learning rate
+        self.gamma = gamma                  # discount factor
+        self.epsilon = epsilon              # epsilon for e-greedy policy
+        self.initType = initType            # zeros, uniform01
+        self.rewardType = rewardType        # shapeRatio, mean, sum
+        self.basisFctType = basisFctType    # hypTanh123, tanh, relu, sigmoid
+        self.typeFeatureVector = typeFeatureVector  # block, nonblock
+        self.tradeRandEpsilon = tradeRandEpsilon
+        self.verbose = verbose
 
         # seeding the experiment
         if seed != 0:
@@ -171,39 +81,47 @@ class Agent:
             tr.manual_seed(self.seed)
 
         # variables
+        self.dfS = None
         self.spaceA = [-1, 0, 1]
-        self.S = 0
-        self.minusA, self.A = 0, 0
-        self.R, self.primeR, self.lineR, self.minusLineR = 0, 0, 0, 0
+        self.S, self.A = 0, 0
+        self.tradeStatus, self.tradePL, self.tau = 0, 0, 0
+        self.primeR = 0
         self.Q, self.nablaQ = 0, 0
         self.zeroVector = tr.zeros((1, n + 1), dtype=tr.double)
         self.randEpsilon = 0
-        self.delta = 0                              # TD-error
-        self.t, self.tau, self.minusTau = 1, 0, 0
-        self.d = len(self.spaceA) * (self.n + 1)
+        self.t = 1
+        self.deltas = []
+        self.wasRandEpsilon = False
 
-        # init vectors
+        if self.typeFeatureVector == "block":
+            self.d = len(self.spaceA) * (self.n + 1)
+        else:
+            self.d = self.n + 1
+
+        # init weight vector
         if initType == "zeros":
             self.w = tr.zeros((self.d, 1), dtype=tr.double)
+
+        elif initType == "uniform01":
+            self.w = tr.zeros((self.d, 1), dtype=tr.double)
+            self.w = self.w.uniform_()
+
         else:
-            raise ValueError("ERROR: initType not recognized!")
+            raise ValueError(f"ERROR: initType {initType} not recognized!")
 
-        """self.memory = pd.DataFrame(
-            columns=['open', 'high', 'low', 'close', 'volume',
-                     'minusA', 'A', 'tau', 'lineR', 'R', 'primeR',
-                     'optQ', 'TD-error']
-        )"""
-
+        # memory
         self.memory = pd.DataFrame(
             columns=['open', 'high', 'low', 'close', 'volume',
-                     'minusA', 'A', 'tau', 'lineR', 'primeR']
+                     'tradeStatus', 'A', 'primeA', 'tau', 'tradePL', 
+                     'primeR']
         )
-
         self.memoryW = None
         self.memoryNablaQ = None
-        self.dfS = None
 
-    def getBasisVector(self, S, minusA, lineR):
+        # counters
+        self.countRandETrue = 0
+
+    def getBasisVector(self, S, tradeStatus, tradePL):
         b = tr.zeros((1, self.n + 1), dtype=tr.double)
 
         for i in range(1, self.n + 1):
@@ -211,48 +129,61 @@ class Agent:
             previousPrice = S[self.t - self.n + i]
 
             b[0, i - 1] = self.basisFunction(
-                x=self.l(
-                    previousPrice=previousPrice,
-                    currentPrice=currentPrice
-                )
+                x=self.ln(currentPrice, previousPrice),
+                basisFctType=self.basisFctType
             )
 
-        if minusA == 0:
-            b[0, -1] = self.basisFunction(x=0)
+        if tradeStatus == 0:
+            b[0, -1] = self.basisFunction(
+                x=0,
+                basisFctType=self.basisFctType
+            )
 
         else:
-            b[0, -1] = self.basisFunction(x=lineR)
+            b[0, -1] = self.basisFunction(
+                x=tradePL,
+                basisFctType=self.basisFctType
+            )
 
         return b
 
-    def getFeatureVector(self, S, A, minusA, lineR):
+    def getFeatureVector(self, S, A, tradeStatus, tradePL):
 
         b = self.getBasisVector(
             S=S,
-            minusA=minusA,
-            lineR=lineR
+            tradeStatus=tradeStatus,
+            tradePL=tradePL
         )
 
-        f = tr.zeros((self.d, 1), dtype=tr.double)
+        if self.typeFeatureVector == "block":
+            f = tr.zeros((self.d, 1), dtype=tr.double)
+            if A == -1:
+                f = tr.hstack(
+                    (b, self.zeroVector, self.zeroVector)
+                ).T
+            elif A == 0:
+                f = tr.hstack(
+                    (self.zeroVector, b, self.zeroVector)
+                ).T
+            elif A == 1:
+                f = tr.hstack(
+                    (self.zeroVector, self.zeroVector, b)
+                ).T
 
-        if A == -1:
-            f = tr.hstack(
-                (b, self.zeroVector, self.zeroVector)
-            ).T
-        elif A == 0:
-            f = tr.hstack(
-                (self.zeroVector, b, self.zeroVector)
-            ).T
-        elif A == 1:
-            f = tr.hstack(
-                (self.zeroVector, self.zeroVector, b)
-            ).T
+            return f
 
-        return f
+        else:
+            b[0, -1] = self.basisFunction(
+                x=A,
+                basisFctType=self.basisFctType
+            )
+            return b.T
 
-    def epsilonGreedyPolicy(self, S, As, minusA, lineR):
+    def epsilonGreedyPolicy(self, S, As, tradeStatus, tradePL):
         self.randEpsilon = np.random.uniform(low=0, high=1, size=None)
-        if self.epsilon <= self.randEpsilon:
+        if self.epsilon >= self.randEpsilon:
+            self.wasRandEpsilon = True
+            self.countRandETrue += 1
             a = np.random.choice(
                 As,
                 size=None,
@@ -260,10 +191,10 @@ class Agent:
                 p=None
             )
             f = self.getFeatureVector(
-                S=S,                        # current state
-                A=a,                        # action t
-                minusA=minusA,              # action t-1
-                lineR=lineR                 # current trade profit
+                S=S,                                # current state
+                A=a,                                # action t
+                tradeStatus=tradeStatus,            # tradeStatus
+                tradePL=tradePL                     # current trade PL
             )
             q = (self.w.T @ f).item()
             return a, q, f
@@ -272,55 +203,41 @@ class Agent:
             Q, nablaQ = {}, {}
             for a in As:
                 f = self.getFeatureVector(
-                    S=S,                    # current state
-                    A=a,                    # action t
-                    minusA=minusA,     # action t-1
-                    lineR=lineR        # current trade profit
+                    S=S,                            # current state
+                    A=a,                            # action t
+                    tradeStatus=tradeStatus,        # tradeStatus
+                    tradePL=tradePL                 # current trade PL
                 )
                 Q[a] = (self.w.T @ f).item()
                 nablaQ[a] = f
 
-            argmax = max(Q, key=Q.get)
-            # TODO: maybe it is choosing the wrong one when even.
+            # checking equal Q values for different actions.
+            equalQs = {k: v for k, v in Q.items()
+                       if list(Q.values()).count(v) > 1}
 
-            maxQ = max(Q.values())
-            return argmax, maxQ, nablaQ[argmax]
+            # if equalQ is detected, do not trade, i.e., select action 0.
+            argmax = max(Q, key=Q.get) if len(equalQs) <= 1 else 0
 
-    def spaceAs(self, minusA):
-        if minusA == -1:
+            return argmax, Q[argmax], nablaQ[argmax]
+
+    def spaceAs(self, tradeStatus):
+        if tradeStatus == -1:
             return [0, 1]
 
-        elif minusA == 0:
+        elif tradeStatus == 0:
             return [-1, 0, 1]
 
-        elif minusA == 1:
+        elif tradeStatus == 1:
             return [-1, 0]
 
-    def reward(self, S, primeS):
-        if self.rewardType == "immediate":
-            return primeS[-1].item() - S[-1].item()
-
-        elif self.rewardType == "logReturn":
-            return self.l(previousPrice=S[-1], currentPrice=primeS[-1])
-
-        else:
-            raise ValueError(f"ERROR: rewardType {self.rewardType} "
-                             f"not recognized.")
-
-    """def saveMemory(self, dfS, minusA, A, tau, lineR, R, primeR, Q,
-                   delta, nablaQ):"""
-
-    def saveMemory(self, dfS, minusA, A, tau, lineR, primeR):
-
+    def saveMemory(self, dfS, tradeStatus, A, primeA, tau, tradePL,
+                   primeR, nablaQ):
         col = dfS.columns.to_list()
-        """extCols = ["minusA", "A", "tau", "lineR", "R", "primeR",
-                   "optQ", "TD-error"]"""
-        extCols = ["minusA", "A", "tau", "lineR", "primeR"]
+        extCols = ["tradeStatus", "A", "primeA", "tau", "tradePL", "primeR"]
         keys = col+extCols
 
         val1 = [dfS[k][-1] for k in dfS.keys().to_list()]
-        """val2 = [minusA, A, tau, lineR, R, primeR, Q, delta]"""
-        val2 = [minusA, A, tau, lineR, primeR]
+        val2 = [tradeStatus, A, primeA, tau, tradePL, primeR]
         vals = val1+val2
 
         timeIdx= dfS.index.to_list()[-1]
@@ -330,7 +247,6 @@ class Agent:
         memory.index = [timeIdx]
         self.memory = pd.concat([self.memory, memory], axis=0)
 
-        """
         if self.memoryW is None:
             mem = self.w.T.tolist()
             df = pd.DataFrame(mem)
@@ -354,126 +270,159 @@ class Agent:
             df = pd.DataFrame(mem)
             df.index = [self.memory.index.to_list()[-1]]
             self.memoryNablaQ = pd.concat([self.memoryNablaQ, df], axis=0)
-        """
 
     def run(self):
 
         if self.t == 1:
-            dfS, A = self.env.getCurrentState(), self.A
-            S = tr.from_numpy(dfS.values[:, 3])[:, None]
+            dfS = self.env.getCurrentState()
+            self.S = tr.from_numpy(dfS.values[:, 3])[:, None]
 
             f = self.getFeatureVector(
-                S=S,                        # current state
-                A=A,                        # action t
-                minusA=self.minusA,         # action t-1
-                lineR=self.lineR            # current trade profit
+                S=self.S,                           # current state
+                A=self.A,                           # action t
+                tradeStatus=self.tradeStatus,       # tradeStatus
+                tradePL=self.tradePL                # current trade profit
             )
 
-            Q = (self.w.T @ f).item()
-            nablaQ = f
-
-            """self.saveMemory(
-                dfS=dfS,
-                minusA=self.minusA,
-                A=A,
-                tau=self.tau,
-                lineR=self.lineR,
-                R=self.R,
-                primeR=self.primeR,
-                Q=Q,
-                delta=self.delta,
-                nablaQ=nablaQ
-            )"""
-            self.saveMemory(
-                dfS=dfS,
-                minusA=self.minusA,
-                A=A,
-                tau=self.tau,
-                lineR=self.lineR,
-                primeR=self.primeR
-            )
-
-        else:
-            S, A, Q, nablaQ = self.S, self.A, self.Q, self.nablaQ
-
-            self.saveMemory(
-                dfS=self.dfS,
-                minusA=self.minusA,
-                A=self.A,
-                tau=self.minusTau,
-                lineR=self.minusLineR,
-                primeR=self.R
-            )
-
-        dfPrimeS, primeR, entryPrice, primeLineR, primeTau, primeMinusA = \
-            self.env.getNextState(A)
-
-        self.dfPrimeS = dfPrimeS
-        primeS = tr.from_numpy(dfPrimeS.values[:, 3])[:, None]
-
-        primeA, primeQ, primeNablaQ = self.epsilonGreedyPolicy(
-            S=primeS,
-            As=self.spaceAs(minusA=primeMinusA),
-            minusA=primeMinusA,
-            lineR=primeLineR
-        )
-
-        delta = primeR + primeQ - Q                 # TD-error
-        print(f"Loss {delta}")
-
-        # TODO: primeR muito alto por causa de ser imediato.
-        #  Tentar shape ou log-return.
-
-        self.w += self.eta * delta * nablaQ         # weight
+            self.Q = (self.w.T @ f).item()
+            self.nablaQ = f
 
         self.t += 1
 
-        self.dfS = dfPrimeS
+        if self.tradeRandEpsilon is False:
+            (dfPrimeS, _, entryPrice, primeTradePL, primeTau,
+             primeTradeStatus, lnPrimeTradePL) = \
+                self.env.getNextState(self.A, self.wasRandEpsilon)
+
+            self.wasRandEpsilon = False
+
+        else:
+            (dfPrimeS, _, entryPrice, primeTradePL, primeTau,
+             primeTradeStatus, lnPrimeTradePL) = \
+                self.env.getNextState(self.A, True)
+
+        primeS = tr.from_numpy(dfPrimeS.values[:, 3])[:, None]
+
+        primeR = self.rewardFunction(
+            Gtplus1=self.env.histR,
+            rewardType=self.rewardType
+        )
+
+        primeA, primeQ, primeNablaQ = self.epsilonGreedyPolicy(
+            S=primeS,
+            As=self.spaceAs(tradeStatus=primeTradeStatus),
+            tradeStatus=primeTradeStatus,
+            tradePL=lnPrimeTradePL
+        )
+
+        # compute TD-error
+        delta = primeR + self.gamma * primeQ - self.Q
+
+        # reducing learning rate
+        # if (len(self.deltas) >= 25) and (self.deltas[-1] > self.deltas[-20]):
+        #    eta = self.eta / 10
+        # else:
+        eta = self.eta
+
+        self.w += eta * delta * self.nablaQ         # weight
+
+        if self.verbose is True:
+            print(f"\nThe prime time is {dfPrimeS.index.to_list()[-1]}.")
+            print(f"The prime closed price is {dfPrimeS.iloc[-1, 3]}.")
+            print(f"\ntradeStatus = {self.tradeStatus}.")
+            print(f"primeTradeStatus = {primeTradeStatus}.")
+            print(f"A = {self.A}.")
+            print(f"primeA = {primeA}.")
+            print(f"tau = {self.tau}.")
+            print(f"primeTau = {primeTau}.")
+            print(f"entryPrice = {entryPrice}.")
+            print(f"primeTradePL = {primeTradePL}.")
+            print(f"lnPrimeTradePL = {lnPrimeTradePL}.")
+            print(f"primeR = {primeR}.")
+
+        self.saveMemory(
+            dfS=dfPrimeS,
+            tradeStatus=primeTradeStatus,
+            A=self.A,
+            primeA=primeA,
+            tau=primeTau,
+            tradePL=primeTradePL,
+            primeR=primeR,
+            nablaQ=self.nablaQ
+        )
+
         self.S = primeS
-        self.minusA = primeMinusA
         self.A = primeA
         self.Q, self.nablaQ = primeQ, primeNablaQ
-        self.delta = delta
-        self.R = primeR
-        self.minusLineR = self.lineR
-        self.lineR = primeLineR
-        self.minusTau = self.tau
+        self.deltas.append(delta)
+        self.tradeStatus = primeTradeStatus
+        self.tradePL = primeTradePL
         self.tau = primeTau
+        self.eta = eta
 
 
 if __name__ == '__main__':
-    env = Environment(n=2)
+    n = 2
+    fileName = "data/WINJ22/WINJ22_1min_OLHCV.csv"
+
+    env = Environment(
+        n=n,
+        fileName=fileName
+    )
 
     agent = Agent(
         env=env,
-        n=2,
-        eta=0.001,
+        n=n,
+        eta=0.05,
         gamma=0.95,
         epsilon=0.1,
         initType="zeros",
-        rewardType="immediate",
-        algoType="SARSA",
-        seed=1
+        rewardType="mean",
+        basisFctType="hypTanh123",
+        typeFeatureVector="nonblock",
+        verbose=True,
+        seed=5,
     )
 
     while env.terminal is not True:
         agent.run()
 
     cumulativeReturn = []
+    taus = []
     for i in range(len(agent.memory)):
+        if (agent.memory["tradeStatus"][i] == 0) and (
+                agent.memory["A"][i] == -1):
+            cumulativeReturn.append(agent.memory["tradePL"][i - 1])
+            taus.append(agent.memory["tau"][i - 1])
 
-        if (agent.memory["minusA"][i] == 1) and (agent.memory["A"][i] == -1):
-            cumulativeReturn.append(agent.memory["lineR"][i+2])
+        elif (agent.memory["tradeStatus"][i] == 0) and (
+                agent.memory["A"][i] == 1):
+            cumulativeReturn.append(agent.memory["tradePL"][i - 1])
+            taus.append(agent.memory["tau"][i - 1])
 
-        elif (agent.memory["minusA"][i] == -1) and (agent.memory["A"][i] == 1):
-            cumulativeReturn.append(agent.memory["lineR"][i+2])
-
-    import seaborn as sns
-    import matplotlib.pyplot as plt
     axisX = [i for i in range(len(cumulativeReturn))]
-    axisY = [sum(cumulativeReturn[:i+1]) for i in range(1, len(cumulativeReturn)+1)]
+    axisY = [sum(cumulativeReturn[:i + 1]) for i in
+             range(1, len(cumulativeReturn) + 1)]
+
+    import plotly.graph_objects as go
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     sns.lineplot(x=axisX, y=axisY)
     # sns.distplot(cumulativeReturn)
     plt.show()
 
-    # error 9:41
+    plt.plot(agent.deltas)
+    plt.show()
+
+    # plot candlestick chart
+    fig = go.Figure(
+        data=[go.Candlestick(
+            x=agent.memory.index,
+            open=agent.memory['open'],
+            high=agent.memory['high'],
+            low=agent.memory['low'],
+            close=agent.memory['close'])
+        ]
+    )
+    fig.show()

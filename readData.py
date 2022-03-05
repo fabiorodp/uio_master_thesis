@@ -116,14 +116,24 @@ def create_candles(ticker='PETR4', candles_periodicity='1D',
 
 if __name__ == '__main__':
     get_instrument(
-        ticker='WINZ21',
-        in_folder='data/',
-        out_folder='data/'
+        ticker='WINJ22',
+        in_folder='data/WINJ22/',
+        out_folder='data/WINJ22/'
     )
 
     create_candles(
-        ticker='WINZ21',
-        candles_periodicity='1min',
-        in_folder='data/',
-        out_folder='data/'
+        ticker='WINJ22',
+        candles_periodicity='5min',
+        in_folder='data/WINJ22/',
+        out_folder='data/WINJ22/'
     )
+
+"""
+Mês de vencido	IND/WIN
+Fevereiro	    G
+Abril	        J
+Junho	        M
+Agosto	        Q
+Outubro	        V
+Dezembro	    Z
+"""

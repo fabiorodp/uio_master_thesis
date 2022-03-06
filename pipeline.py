@@ -10,7 +10,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
-params = {
+"""params = {
     "n": [2, 5, 10, 15, 30, 60, 90, 120],
     "basisFctType": ["hypTanh123", "tanh", "sigmoid", "relu"],
     "rewardType": ["shapeRatio", "mean", "sum"],
@@ -19,12 +19,25 @@ params = {
     "epsilon": [0.25, 0.2, 0.15, 0.10, 0.05, 0.025, 0.01],
     "tradeRandEpsilon": [True, False],
     "initType": ["zeros", "uniform01"]
+}"""
+
+params = {
+    "n": [2, 5, 10, 60, 90],
+    "basisFctType": ["hypTanh123", "tanh", "sigmoid", "relu"],
+    "rewardType": ["shapeRatio", "mean", "sum"],
+    "eta": [0.1, 0.001, 0.0001, 0.000001],
+    "gamma": [0.90, 0.95, 1],
+    "epsilon": [0.15, 0.10, 0.05, 0.01],
+    "tradeRandEpsilon": [True, False],
+    "initType": ["zeros", "uniform01"]
 }
 
 save = {
     "params": [],
     "histR": [],
-    "sumTradePL": []
+    "sumTradePL": [],
+    "deltas": [],
+    "cumPLs": []
 }
 
 fileName = "data/WING22/WING22_1min_OLHCV.csv"
@@ -74,24 +87,5 @@ for a in params["n"]:
                                 save["params"].append((a, b, c, d, e, f, g, h))
                                 save["histR"].append(env.histR)
                                 save["sumTradePL"].append(sum(cumReturn))
-
-"""axisX = [i for i in range(len(cumulativeReturn))]
-axisY = [sum(cumulativeReturn[:i+1]) for i in range(1, len(cumulativeReturn)+1)]
-sns.lineplot(x=axisX, y=axisY)
-# sns.distplot(cumulativeReturn)
-plt.show()
-
-plt.plot(agent.deltas)
-plt.show()
-
-# plot candlestick chart
-fig = go.Figure(
-    data=[go.Candlestick(
-        x=agent.memory.index,
-        open=agent.memory['open'],
-        high=agent.memory['high'],
-        low=agent.memory['low'],
-        close=agent.memory['close'])
-    ]
-)
-fig.show()"""
+                                save["deltas"].append(agent.deltas)
+                                save["cumPLs"].append(cumReturn)

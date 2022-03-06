@@ -4,7 +4,7 @@
 import numpy as np
 import torch as tr
 import pandas as pd
-from environment1 import Environment
+from environment3 import Environment
 
 import warnings
 
@@ -124,9 +124,9 @@ class Agent:
     def getBasisVector(self, S, tradeStatus, tradePL):
         b = tr.zeros((1, self.n + 1), dtype=tr.double)
 
-        for i in range(1, self.n + 1):
-            currentPrice = S[self.t - (self.n - 1) + i]
-            previousPrice = S[self.t - self.n + i]
+        for i in reversed(range(2, self.n + 2)):
+            currentPrice = S[-i + 1]
+            previousPrice = S[-i]
 
             b[0, i - 1] = self.basisFunction(
                 x=self.ln(currentPrice, previousPrice),
@@ -319,9 +319,9 @@ class Agent:
         delta = primeR + self.gamma * primeQ - self.Q
 
         # reducing learning rate
-        # if (len(self.deltas) >= 25) and (self.deltas[-1] > self.deltas[-20]):
-        #    eta = self.eta / 10
-        # else:
+        """if (len(self.deltas) >= 25) and (self.deltas[-1] > self.deltas[-20]):
+            eta = self.eta / 10
+        else:"""
         eta = self.eta
 
         self.w += eta * delta * self.nablaQ         # weight
@@ -362,8 +362,8 @@ class Agent:
 
 
 if __name__ == '__main__':
-    n = 2
-    fileName = "data/WINJ22/WINJ22_1min_OLHCV.csv"
+    n = 5  # 2 and 5 works for long range. 60 works for short range.
+    fileName = "data/WING22/WING22_1min_OLHCV.csv"
 
     env = Environment(
         n=n,
@@ -373,15 +373,16 @@ if __name__ == '__main__':
     agent = Agent(
         env=env,
         n=n,
-        eta=0.05,
+        eta=0.005,
         gamma=0.95,
-        epsilon=0.1,
-        initType="zeros",
+        epsilon=0.05,
+        initType="uniform01",
         rewardType="mean",
         basisFctType="hypTanh123",
-        typeFeatureVector="nonblock",
+        typeFeatureVector="block",
+        tradeRandEpsilon=False,
         verbose=True,
-        seed=5,
+        seed=20,                        # 5, 50, 20 works, 2 not work
     )
 
     while env.terminal is not True:
@@ -409,10 +410,13 @@ if __name__ == '__main__':
     import seaborn as sns
 
     sns.lineplot(x=axisX, y=axisY)
-    # sns.distplot(cumulativeReturn)
     plt.show()
 
     plt.plot(agent.deltas)
+    plt.show()
+
+    cumulativeReturn = [e for e in cumulativeReturn if e != 0]  # errado. fazer com numpy argzero
+    sns.distplot(cumulativeReturn)
     plt.show()
 
     # plot candlestick chart

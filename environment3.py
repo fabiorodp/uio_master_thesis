@@ -50,7 +50,7 @@ class Environment:
 
         if wasRandEpsilon is False:
             if A == -1:                             # limit short
-                if self.tradeStatus == 0:       # new trade opened
+                if self.tradeStatus == 0:           # new trade opened
                     self.tau += 1
                     self.tradeStatus = -1
                     primeR = C - primeC
@@ -58,7 +58,7 @@ class Environment:
                     tradePL = self.entryPrice - primeC
                     self.histR.append(primeR)
                     self.histTradePL.append(tradePL)
-                    lnTradePL = self.ln(abs(self.entryPrice), primeC)
+                    lnTradePL = self.ln(primeC, abs(self.entryPrice))
                     return (primeS, primeR, self.entryPrice, tradePL,
                             self.tau, self.tradeStatus, lnTradePL)
 
@@ -103,7 +103,7 @@ class Environment:
                             self.tau, self.tradeStatus, lnTradePL)
 
             elif A == 1:                            # limit long
-                if self.tradeStatus == 0:       # new trade opened
+                if self.tradeStatus == 0:           # new trade opened
                     self.tau += 1
                     self.tradeStatus = 1
                     primeR = primeC - C

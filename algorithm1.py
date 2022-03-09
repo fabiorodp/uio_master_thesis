@@ -148,7 +148,6 @@ class Agent:
         return b
 
     def getFeatureVector(self, S, A, tradeStatus, tradePL):
-
         b = self.getBasisVector(
             S=S,
             tradeStatus=tradeStatus,
@@ -173,11 +172,18 @@ class Agent:
             return f
 
         else:
-            b[0, -1] = self.basisFunction(
-                x=A,
-                basisFctType=self.basisFctType
-            )
-            return b.T
+            if tradeStatus == 0:
+                b[0, -1] = self.basisFunction(
+                    x=0,
+                    basisFctType=self.basisFctType
+                )
+                return b.T
+
+            else:
+                b[0, -1] = self.basisFunction(
+                    x=tradePL,
+                    basisFctType=self.basisFctType
+                )
 
     def epsilonGreedyPolicy(self, S, As, tradeStatus, tradePL):
         self.randEpsilon = np.random.uniform(low=0, high=1, size=None)
@@ -363,7 +369,8 @@ class Agent:
 
 if __name__ == '__main__':
     n = 5  # 2 and 5 works for long range. 60 works for short range.
-    fileName = "data/WING22/WING22_1min_OLHCV.csv"
+    fileName = "data/WINJ21/WINJ21_1min_OLHCV.csv"
+    # fileName = "data/WING22/CSV/day3/WING22_5min_OLHCV.csv"
 
     env = Environment(
         n=n,
@@ -401,9 +408,12 @@ if __name__ == '__main__':
             cumulativeReturn.append(agent.memory["tradePL"][i - 1])
             taus.append(agent.memory["tau"][i - 1])
 
-    axisX = [i for i in range(len(cumulativeReturn))]
-    axisY = [sum(cumulativeReturn[:i + 1]) for i in
-             range(1, len(cumulativeReturn) + 1)]
+    if agent.memory["tau"][-1] != 0:
+        cumulativeReturn.append(agent.memory["tradePL"][-1])
+        taus.append(agent.memory["tau"][1])
+
+    axisY = [0]+[sum(cumulativeReturn[:i]) for i in range(1, len(cumulativeReturn)+1)]
+    axisX = [i for i in range(len(axisY))]
 
     import plotly.graph_objects as go
     import matplotlib.pyplot as plt
@@ -415,9 +425,11 @@ if __name__ == '__main__':
     plt.plot(agent.deltas)
     plt.show()
 
-    cumulativeReturn = [e for e in cumulativeReturn if e != 0]  # errado. fazer com numpy argzero
+    cumulativeReturn = [e for e in cumulativeReturn if e != 0]
     sns.distplot(cumulativeReturn)
     plt.show()
+
+    sum(cumulativeReturn)
 
     # plot candlestick chart
     fig = go.Figure(

@@ -2,7 +2,7 @@
 # E-mail: fabior@uio.no
 
 from algorithm1 import Agent
-from environment3 import Environment
+from environment3b import Environment
 
 import numpy as np
 import pandas as pd
@@ -22,12 +22,12 @@ import plotly.graph_objects as go
 }"""
 
 params = {
-    "n": [2, 5, 10, 60, 90],
-    "basisFctType": ["hypTanh123", "tanh", "sigmoid", "relu"],
+    "n": [2, 5],  # 10, 60, 90],
+    "basisFctType": ["hypTanh123", "hypTanh", "sigmoid", "relu"],
     "rewardType": ["shapeRatio", "mean", "sum"],
-    "eta": [0.1, 0.001, 0.0001, 0.000001],
+    "eta": [0.1, 0.001, 0.0001],
     "gamma": [0.90, 0.95, 1],
-    "epsilon": [0.15, 0.10, 0.05, 0.01],
+    "epsilon": [0.2, 0.15, 0.10, 0.05],
     "tradeRandEpsilon": [True, False],
     "initType": ["zeros", "uniform01"]
 }

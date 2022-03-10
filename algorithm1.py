@@ -4,7 +4,7 @@
 import numpy as np
 import torch as tr
 import pandas as pd
-from environment3 import Environment
+from environment3b import Environment
 
 import warnings
 
@@ -69,7 +69,7 @@ class Agent:
         self.epsilon = epsilon              # epsilon for e-greedy policy
         self.initType = initType            # zeros, uniform01
         self.rewardType = rewardType        # shapeRatio, mean, sum
-        self.basisFctType = basisFctType    # hypTanh123, tanh, relu, sigmoid
+        self.basisFctType = basisFctType    # hypTanh123, hypTanh, relu, sigmoid
         self.typeFeatureVector = typeFeatureVector  # block, nonblock
         self.tradeRandEpsilon = tradeRandEpsilon
         self.verbose = verbose
@@ -368,8 +368,8 @@ class Agent:
 
 
 if __name__ == '__main__':
-    n = 5  # 2 and 5 works for long range. 60 works for short range.
-    fileName = "data/WINJ21/WINJ21_1min_OLHCV.csv"
+    n = 2  # 2 and 5 works for long range. 60 works for short range.
+    fileName = "data/WING22/WING22_1min_OLHCV.csv"
     # fileName = "data/WING22/CSV/day3/WING22_5min_OLHCV.csv"
 
     env = Environment(
@@ -380,11 +380,11 @@ if __name__ == '__main__':
     agent = Agent(
         env=env,
         n=n,
-        eta=0.005,
+        eta=0.001,      # 0.005 for n=30 and 30min or 0.05 for n=5 and 1min
         gamma=0.95,
-        epsilon=0.05,
+        epsilon=0.15,   # 0.05 for n=30 and 30min or 0.05 for n=5 and 1min
         initType="uniform01",
-        rewardType="mean",
+        rewardType="shapeRatio",  # mean for n=30 and 30min or for n=5 and 1min
         basisFctType="hypTanh123",
         typeFeatureVector="block",
         tradeRandEpsilon=False,
@@ -415,9 +415,8 @@ if __name__ == '__main__':
     axisY = [0]+[sum(cumulativeReturn[:i]) for i in range(1, len(cumulativeReturn)+1)]
     axisX = [i for i in range(len(axisY))]
 
-    import plotly.graph_objects as go
-    import matplotlib.pyplot as plt
     import seaborn as sns
+    import matplotlib.pyplot as plt
 
     sns.lineplot(x=axisX, y=axisY)
     plt.show()
@@ -430,15 +429,3 @@ if __name__ == '__main__':
     plt.show()
 
     sum(cumulativeReturn)
-
-    # plot candlestick chart
-    fig = go.Figure(
-        data=[go.Candlestick(
-            x=agent.memory.index,
-            open=agent.memory['open'],
-            high=agent.memory['high'],
-            low=agent.memory['low'],
-            close=agent.memory['close'])
-        ]
-    )
-    fig.show()

@@ -130,7 +130,18 @@ class Environment:
                             self.tau, self.tradeStatus, lnTradePL)
 
         elif wasRandEpsilon is True:
-            tradePL, lnTradePL = 0.0, 0.0
+            if self.tradeStatus == -1:
+                tradePL = self.entryPrice - primeC
+                self.histTradePL.append(tradePL)
+                lnTradePL = self.ln(primeC, abs(self.entryPrice))
+
+            elif self.tradeStatus == 0:
+                tradePL, lnTradePL = 0.0, 0.0
+
+            elif self.tradeStatus == 1:
+                tradePL = self.entryPrice + primeC
+                self.histTradePL.append(tradePL)
+                lnTradePL = self.ln(primeC, abs(self.entryPrice))
 
             if A == -1:                         # limit short
                 primeR = C - primeC
@@ -144,7 +155,10 @@ class Environment:
             elif A == 0:                        # do nothing
                 primeR = 0.0
                 self.histR.append(primeR)
-                if (self.tradeStatus == -1) or (self.tradeStatus == 1):
+
+                if self.tradeStatus == -1:
+                    self.tau += 1
+                elif self.tradeStatus == 1:
                     self.tau += 1
 
                 return (primeS, primeR, self.entryPrice, tradePL,
@@ -153,7 +167,10 @@ class Environment:
             elif A == 1:                        # limit long
                 primeR = primeC - C
                 self.histR.append(primeR)
-                if (self.tradeStatus == -1) or (self.tradeStatus == 1):
+
+                if self.tradeStatus == -1:
+                    self.tau += 1
+                elif self.tradeStatus == 1:
                     self.tau += 1
 
                 return (primeS, primeR, self.entryPrice, tradePL,

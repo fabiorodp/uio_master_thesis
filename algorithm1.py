@@ -4,7 +4,6 @@
 import numpy as np
 import torch as tr
 import pandas as pd
-from environment3b import Environment
 
 import warnings
 
@@ -339,8 +338,8 @@ class Agent:
         delta = primeR + self.gamma * primeQ - self.Q
 
         # reducing learning rate
-        """if (len(self.deltas) >= 25) and (self.deltas[-1] > self.deltas[-20]):
-            eta = self.eta / 10
+        """if (len(self.deltas) >= 5) and (self.deltas[-1] > self.deltas[-3]):
+            eta = self.eta / 2
         else:"""
         eta = self.eta
 
@@ -375,9 +374,10 @@ class Agent:
 if __name__ == '__main__':
     import seaborn as sns
     import matplotlib.pyplot as plt
+    from environment3a import Environment
 
-    n = 2  # 2 and 5 works for long range. 60 works for short range.
-    fileName = "data/WING22/WING22_1min_OLHCV.csv"
+    n = 10  # 2 and 5 works for long range. 60 works for short range.
+    fileName = "data/WING22/WING22_30min_OLHCV.csv"
     # fileName = "data/WING22/CSV/day3/WING22_5min_OLHCV.csv"
 
     env = Environment(
@@ -389,11 +389,11 @@ if __name__ == '__main__':
         env=env,
         n=n,
         eta=0.001,      # 0.005 for n=30 and 30min or 0.05 for n=5 and 1min
-        gamma=0.95,
+        gamma=0.9,
         epsilon=0.15,   # 0.05 for n=30 and 30min or 0.05 for n=5 and 1min
         initType="uniform01",
         rewardType="shapeRatio",  # mean for n=30 and 30min or for n=5 and 1min
-        basisFctType="hypTanh123",
+        basisFctType="sigmoid",
         typeFeatureVector="block",
         tradeRandEpsilon=False,
         verbose=True,
@@ -403,9 +403,16 @@ if __name__ == '__main__':
     while env.terminal is not True:
         agent.run()
 
+    # fixing agent.memory
     for i in range(len(agent.memory)):
-        agent.memory["tradePL"][i] = agent.memory["entryPrice"][i] + \
-                                     agent.memory["close"][i]
+        if agent.memory["tradeStatus"][i] == -1:
+            agent.memory["tradePL"][i] = agent.memory["entryPrice"][i] - \
+                                         agent.memory["close"][i]
+        elif agent.memory["tradeStatus"][i] == 1:
+            agent.memory["tradePL"][i] = agent.memory["entryPrice"][i] + \
+                                         agent.memory["close"][i]
+        elif agent.memory["tradeStatus"][i] == 0:
+            agent.memory["tradePL"][i] = 0
 
     cumulativeReturn = []
     taus = []
@@ -441,9 +448,9 @@ if __name__ == '__main__':
 
     sum(env.portfolioPLs)
 
-    axisY = [0] + [sum(env.portfolioPLs[:i]) for i in
-                   range(1, len(env.portfolioPLs) + 1)]
-    axisX = [i for i in range(len(axisY))]
+    axisY = [0] + [sum(agent.memory["primeR"][:i]) for i in
+                   range(1, len(agent.memory["primeR"]) + 1)]
+    axisX = [i for i in range(len(agent.memory["primeR"].values))]
 
-    sns.lineplot(x=axisX, y=axisY)
+    sns.lineplot(x=axisX, y=agent.memory["primeR"].values)
     plt.show()

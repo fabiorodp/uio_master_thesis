@@ -31,6 +31,7 @@ save = {
     "params": [],
     "histR": [],
     "sumTradePL": [],
+    "sumTradePL2": [],
     "deltas": [],
     "cumPLs": []
 }

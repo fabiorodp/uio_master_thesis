@@ -12,8 +12,8 @@ import warnings
 class Environment:
 
     @staticmethod
-    def ln(currentPrice, previousPrice):
-        """Computing a feature..."""
+    def ln(currentPrice: float, previousPrice: float) -> float:
+        """Computing the logarithm return of a price difference..."""
         return np.log(currentPrice / previousPrice)
 
     def __init__(self, n, fileName="data/WING22_1min_OLHCV.csv"):
@@ -28,7 +28,8 @@ class Environment:
         self.histR = []
         self.histTradePL = []
         self.lastHistTradePL = []
-        self.countNotExecuted = 0
+        self.portfolioPLs = []
+        self.tradePL = 0
 
     def getCurrentState(self):
         S = self.data.iloc[0: self.n + self.t, :]
@@ -43,8 +44,6 @@ class Environment:
         self.S = S
         self.primeS = primeS
 
-        self.terminal = True if len(primeS) == self.lenData else False
-
         C = S.iloc[-1, 3]
         primeC = primeS.iloc[-1, 3]
 
@@ -55,52 +54,38 @@ class Environment:
                     self.tradeStatus = -1
                     primeR = C - primeC
                     self.entryPrice = 1 * primeS.iloc[-1 - self.tau, 3]
-                    tradePL = self.entryPrice - primeC
-                    self.histR.append(primeR)
-                    self.histTradePL.append(tradePL)
+                    self.tradePL = self.entryPrice - primeC
+                    self.histTradePL.append(self.tradePL)
                     lnTradePL = self.ln(primeC, abs(self.entryPrice))
-                    return (primeS, primeR, self.entryPrice, tradePL,
-                            self.tau, self.tradeStatus, lnTradePL)
 
                 elif self.tradeStatus == 1:     # current trade closed
                     self.tradeStatus = 0
                     primeR = primeC - C
+                    self.portfolioPLs.append(self.tradePL)
                     self.entryPrice = 0
-                    tradePL = 0
+                    self.tradePL = 0
                     self.tau = 0
-                    self.histR.append(primeR)
                     self.lastHistTradePL = self.histTradePL
                     self.histTradePL = []
                     lnTradePL = 0
-                    return (primeS, primeR, self.entryPrice, tradePL,
-                            self.tau, self.tradeStatus, lnTradePL)
 
             elif A == 0:                            # do nothing
                 if self.tradeStatus == 0:           # not on a trade
-                    primeR, tradePL, lnTradePL = 0.0, 0.0, 0.0
-                    self.histR.append(primeR)
-                    return (primeS, primeR, self.entryPrice, tradePL,
-                            self.tau, self.tradeStatus, lnTradePL)
+                    primeR, self.tradePL, lnTradePL = 0.0, 0.0, 0.0
 
                 elif self.tradeStatus == 1:         # on a short trade
                     self.tau += 1
                     primeR = primeC - C
-                    tradePL = self.entryPrice + primeC
-                    self.histR.append(primeR)
-                    self.histTradePL.append(tradePL)
+                    self.tradePL = self.entryPrice + primeC
+                    self.histTradePL.append(self.tradePL)
                     lnTradePL = self.ln(primeC, abs(self.entryPrice))
-                    return (primeS, primeR, self.entryPrice, tradePL,
-                            self.tau, self.tradeStatus, lnTradePL)
 
                 elif self.tradeStatus == -1:        # on a long trade
                     self.tau += 1
                     primeR = C - primeC
-                    tradePL = self.entryPrice - primeC
-                    self.histR.append(primeR)
-                    self.histTradePL.append(tradePL)
+                    self.tradePL = self.entryPrice - primeC
+                    self.histTradePL.append(self.tradePL)
                     lnTradePL = self.ln(primeC, abs(self.entryPrice))
-                    return (primeS, primeR, self.entryPrice, tradePL,
-                            self.tau, self.tradeStatus, lnTradePL)
 
             elif A == 1:                            # limit long
                 if self.tradeStatus == 0:           # new trade opened
@@ -108,59 +93,53 @@ class Environment:
                     self.tradeStatus = 1
                     primeR = primeC - C
                     self.entryPrice = -1 * primeS.iloc[-1 - self.tau, 3]
-                    tradePL = self.entryPrice + primeC
-                    tau = self.tau
-                    self.histR.append(primeR)
-                    self.histTradePL.append(tradePL)
+                    self.tradePL = self.entryPrice + primeC
+                    self.histTradePL.append(self.tradePL)
                     lnTradePL = self.ln(primeC, abs(self.entryPrice))
-                    return (primeS, primeR, self.entryPrice, tradePL,
-                            tau, self.tradeStatus, lnTradePL)
 
                 elif self.tradeStatus == -1:    # current short trade closed
                     self.tradeStatus = 0
                     primeR = C - primeC
+                    self.portfolioPLs.append(self.tradePL)
                     self.entryPrice = 0
-                    tradePL = 0
+                    self.tradePL = 0
                     self.tau = 0
-                    self.histR.append(primeR)
                     self.lastHistTradePL = self.histTradePL
                     self.histTradePL = []
                     lnTradePL = 0
-                    return (primeS, primeR, self.entryPrice, tradePL,
-                            self.tau, self.tradeStatus, lnTradePL)
+
+            self.histR.append(primeR)
+
+            if len(primeS) == self.lenData:
+                self.terminal = True
+                if self.tradeStatus != 0:
+                    self.portfolioPLs.append(self.tradePL)
+
+            return (primeS, primeR, self.entryPrice, self.tradePL,
+                    self.tau, self.tradeStatus, lnTradePL)
 
         elif wasRandEpsilon is True:
+            # we do not want these variables to impact agent's gradient
             tradePL, lnTradePL = 0.0, 0.0
+
+            if (self.tradeStatus == -1) or (self.tradeStatus == 1):
+                self.tau += 1
 
             if A == -1:                         # limit short
                 primeR = C - primeC
-                self.histR.append(primeR)
-                if (self.tradeStatus == -1) or (self.tradeStatus == 1):
-                    self.tau += 1
-
-                return (primeS, primeR, self.entryPrice, tradePL,
-                        self.tau, self.tradeStatus, lnTradePL)
 
             elif A == 0:                        # do nothing
                 primeR = 0.0
-                self.histR.append(primeR)
-
-                if self.tradeStatus == -1:
-                    self.tau += 1
-                elif self.tradeStatus == 1:
-                    self.tau += 1
-
-                return (primeS, primeR, self.entryPrice, tradePL,
-                        self.tau, self.tradeStatus, lnTradePL)
 
             elif A == 1:                        # limit long
                 primeR = primeC - C
-                self.histR.append(primeR)
 
-                if self.tradeStatus == -1:
-                    self.tau += 1
-                elif self.tradeStatus == 1:
-                    self.tau += 1
+            self.histR.append(primeR)
 
-                return (primeS, primeR, self.entryPrice, tradePL,
-                        self.tau, self.tradeStatus, lnTradePL)
+            if len(primeS) == self.lenData:
+                self.terminal = True
+                if self.tradeStatus != 0:
+                    self.portfolioPLs.append(tradePL)
+
+            return (primeS, primeR, self.entryPrice, tradePL,
+                    self.tau, self.tradeStatus, lnTradePL)

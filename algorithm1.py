@@ -112,8 +112,8 @@ class Agent:
         # memory
         self.memory = pd.DataFrame(
             columns=['open', 'high', 'low', 'close', 'volume',
-                     'tradeStatus', 'A', 'primeA', 'tau', 'tradePL', 
-                     'primeR']
+                     "entryPrice", "tradeStatus", "A", "tradePL", "tau",
+                     "primeR", "wasRandEpsilon"]
         )
         self.memoryW = None
         self.memoryNablaQ = None
@@ -207,6 +207,7 @@ class Agent:
 
         else:
             Q, nablaQ = {}, {}
+            self.wasRandEpsilon = False
             for a in As:
                 f = self.getFeatureVector(
                     S=S,                            # current state
@@ -236,22 +237,26 @@ class Agent:
         elif tradeStatus == 1:
             return [-1, 0]
 
-    def saveMemory(self, dfS, tradeStatus, A, primeA, tau, tradePL,
-                   primeR, nablaQ):
+    def saveTapeScript(self, dfS, entryPrice, tradeStatus, A, tradePL, tau,
+                       primeR, wasRandEpsilon):
         col = dfS.columns.to_list()
-        extCols = ["tradeStatus", "A", "primeA", "tau", "tradePL", "primeR"]
-        keys = col+extCols
+        extCols = ["entryPrice", "tradeStatus", "A", "tradePL", "tau",
+                   "primeR", "wasRandEpsilon"]
+        keys = col + extCols
 
         val1 = [dfS[k][-1] for k in dfS.keys().to_list()]
-        val2 = [tradeStatus, A, primeA, tau, tradePL, primeR]
-        vals = val1+val2
+        val2 = [entryPrice, tradeStatus, A, tradePL, tau, primeR,
+                wasRandEpsilon]
+        vals = val1 + val2
 
-        timeIdx= dfS.index.to_list()[-1]
+        timeIdx = dfS.index.to_list()[-1]
 
         memory = pd.DataFrame(vals).T
         memory.columns = keys
         memory.index = [timeIdx]
         self.memory = pd.concat([self.memory, memory], axis=0)
+
+    def saveMemory(self, nablaQ):
 
         if self.memoryW is None:
             mem = self.w.T.tolist()
@@ -300,18 +305,27 @@ class Agent:
              primeTradeStatus, lnPrimeTradePL) = \
                 self.env.getNextState(self.A, self.wasRandEpsilon)
 
-            self.wasRandEpsilon = False
-
         else:
             (dfPrimeS, _, entryPrice, primeTradePL, primeTau,
              primeTradeStatus, lnPrimeTradePL) = \
-                self.env.getNextState(self.A, True)
+                self.env.getNextState(self.A, False)
 
         primeS = tr.from_numpy(dfPrimeS.values[:, 3])[:, None]
 
         primeR = self.rewardFunction(
             Gtplus1=self.env.histR,
             rewardType=self.rewardType
+        )
+
+        self.saveTapeScript(
+            dfS=dfPrimeS,
+            entryPrice=int(entryPrice),
+            tradeStatus=primeTradeStatus,
+            A=self.A,
+            tradePL=primeTradePL,
+            tau=primeTau,
+            primeR=primeR,
+            wasRandEpsilon=self.wasRandEpsilon
         )
 
         primeA, primeQ, primeNablaQ = self.epsilonGreedyPolicy(
@@ -346,16 +360,7 @@ class Agent:
             print(f"lnPrimeTradePL = {lnPrimeTradePL}.")
             print(f"primeR = {primeR}.")
 
-        self.saveMemory(
-            dfS=dfPrimeS,
-            tradeStatus=primeTradeStatus,
-            A=self.A,
-            primeA=primeA,
-            tau=primeTau,
-            tradePL=primeTradePL,
-            primeR=primeR,
-            nablaQ=self.nablaQ
-        )
+        self.saveMemory(nablaQ=self.nablaQ)
 
         self.S = primeS
         self.A = primeA
@@ -368,6 +373,9 @@ class Agent:
 
 
 if __name__ == '__main__':
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+
     n = 2  # 2 and 5 works for long range. 60 works for short range.
     fileName = "data/WING22/WING22_1min_OLHCV.csv"
     # fileName = "data/WING22/CSV/day3/WING22_5min_OLHCV.csv"
@@ -395,6 +403,10 @@ if __name__ == '__main__':
     while env.terminal is not True:
         agent.run()
 
+    for i in range(len(agent.memory)):
+        agent.memory["tradePL"][i] = agent.memory["entryPrice"][i] + \
+                                     agent.memory["close"][i]
+
     cumulativeReturn = []
     taus = []
     for i in range(len(agent.memory)):
@@ -415,9 +427,6 @@ if __name__ == '__main__':
     axisY = [0]+[sum(cumulativeReturn[:i]) for i in range(1, len(cumulativeReturn)+1)]
     axisX = [i for i in range(len(axisY))]
 
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-
     sns.lineplot(x=axisX, y=axisY)
     plt.show()
 
@@ -429,3 +438,12 @@ if __name__ == '__main__':
     plt.show()
 
     sum(cumulativeReturn)
+
+    sum(env.portfolioPLs)
+
+    axisY = [0] + [sum(env.portfolioPLs[:i]) for i in
+                   range(1, len(env.portfolioPLs) + 1)]
+    axisX = [i for i in range(len(axisY))]
+
+    sns.lineplot(x=axisX, y=axisY)
+    plt.show()

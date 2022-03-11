@@ -22,7 +22,7 @@ import plotly.graph_objects as go
 }"""
 
 params = {
-    "n": [2, 5],  # 10, 60, 90],
+    "n": [2, 5, 10], # , 60, 90],
     "basisFctType": ["hypTanh123", "hypTanh", "sigmoid", "relu"],
     "rewardType": ["shapeRatio", "mean", "sum"],
     "eta": [0.1, 0.001, 0.0001],
@@ -40,7 +40,7 @@ save = {
     "cumPLs": []
 }
 
-fileName = "data/WING22/WING22_1min_OLHCV.csv"
+fileName = "data/WING22/WING22_30min_OLHCV.csv"
 
 for a in params["n"]:
     for b in params["basisFctType"]:

@@ -13,7 +13,7 @@ params = {
     "rewardType": ["mean"],  # "shapeRatio" not working
     "eta": [0.1, 0.01, 0.001],
     "gamma": [0.9, 0.95, 1],
-    "epsilon": [0.1, 0.2, 0.15, 0.10, 0.05],
+    "epsilon": [-1, 0.2, 0.15, 0.1, 0.05],
     "initType": ["uniform01"],
     "lrScheduler": [True, False],
     "seed": [i for i in range(1, 11)]

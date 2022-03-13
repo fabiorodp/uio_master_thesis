@@ -5,32 +5,33 @@ import numpy as np
 from algo1 import Agent
 from env1 import Environment
 
+fileName = "data/WING22/WING22_60min_OLHCV.csv"
 
 params = {
-    "n": [2, 5, 10, 50],
-    "basisFctType": ["hypTanh123", "hypTanh", "sigmoid", "relu"],
-    "rewardType": ["shapeRatio", "mean", "sum"],
-    "eta": [0.1, 0.01, 0.001],
-    "gamma": [0.90, 0.95, 1],
-    "epsilon": [-1, 0.2, 0.15, 0.10, 0.05],
+    "n": [2],  # , 5, 10, 50],
+    "basisFctType": ["sigmoid"],  # "hypTanh", "sigmoid", "relu"],
+    "rewardType": ["mean"],  # "sum"],  # "shapeRatio" not working
+    "eta": [0.1],  # 0.01, 0.001],
+    "gamma": [1],  # 0.95, 1],
+    "epsilon": [0.1],  # 0.2, 0.15, 0.10, 0.05],
     "initType": ["uniform01"],
-    "lrScheduler": [True, False],
-    "seed": [i for i in range(1, 21)]
+    "lrScheduler": [False],  # False],
+    "seed": [i for i in range(1, 6)]
 }
 
 save = {
     "params": [],
     "histTradePLs": [],
+    "sumTradePLs": [],
     "deltas": [],
 }
 
-save1 = {
+saved = {
     "params": [],
-    "meanPL": []
+    "histTradePLs": [],
+    "sumTradePLs": [],
+    "meanSumTradePLs": []
 }
-
-fileName = "data/WING22/WING22_60min_OLHCV.csv"
-
 
 for a in params["n"]:
     for b in params["basisFctType"]:
@@ -39,38 +40,48 @@ for a in params["n"]:
                 for e in params["gamma"]:
                     for f in params["epsilon"]:
                         for g in params["initType"]:
-                            save1["params"].append((a, b, c, d, e, f, g))
-                            meanPL = []
+                            for h in params["lrScheduler"]:
+                                saved["params"].append((a, b, c, d, e, f, g, h))
+                                histTradePLs = []
+                                sumTradePLs = []
 
-                            for h in params["seed"]:
-                                env = Environment(
-                                    n=a,
-                                    fileName=fileName,
-                                    initInvest=5600*5
-                                )
+                                for i in params["seed"]:
+                                    initInvest = 5600*5
 
-                                agent = Agent(
-                                    env=env,
-                                    n=a,
-                                    initInvest=5600*5,
-                                    eta=d,
-                                    gamma=e,
-                                    epsilon=f,
-                                    initType=g,
-                                    rewardType=c,
-                                    basisFctType=b,
-                                    typeFeatureVector="block",
-                                    lrScheduler=True,
-                                    verbose=False,
-                                    seed=h,
-                                )
+                                    env = Environment(
+                                        n=a,
+                                        fileName=fileName,
+                                        initInvest=initInvest,
+                                        seed=i
+                                    )
 
-                                while env.terminal is not True:
-                                    agent.run()
+                                    agent = Agent(
+                                        env=env,
+                                        n=a,
+                                        initInvest=initInvest,
+                                        eta=d,
+                                        gamma=e,
+                                        epsilon=f,
+                                        initType=g,
+                                        rewardType=c,
+                                        basisFctType=b,
+                                        typeFeatureVector="block",
+                                        lrScheduler=h,
+                                        verbose=False,
+                                        seed=i,
+                                    )
 
-                                save["params"].append((a, b, c, d, e, f, g, h))
-                                save["histTradePLs"].append(env.histTradePLs)
-                                save["deltas"].append(agent.deltas)
-                                meanPL.append(sum(env.histTradePLs))
+                                    while env.terminal is not True:
+                                        agent.run()
 
-                            save1["meanPL"].append(np.mean(meanPL))
+                                    save["params"].append((a, b, c, d, e, f, g, h, i))
+                                    save["histTradePLs"].append(env.histTradePLs)
+                                    save["sumTradePLs"].append(sum(env.histTradePLs))
+                                    save["deltas"].append(agent.deltas)
+
+                                    histTradePLs.append(env.histTradePLs)
+                                    sumTradePLs.append(sum(env.histTradePLs))
+
+                                saved["histTradePLs"].append(histTradePLs)
+                                saved["sumTradePLs"].append(sumTradePLs)
+                                saved["meanSumTradePLs"].append(np.mean(sumTradePLs))

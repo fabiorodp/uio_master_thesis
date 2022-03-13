@@ -4,7 +4,7 @@
 import numpy as np
 import torch as tr
 import pandas as pd
-from env1 import Environment
+from env import Environment
 from datetime import datetime
 
 import warnings
@@ -49,9 +49,6 @@ class Agent:
 
         elif rewardType == "mean":
             return np.mean(Gtplus1)
-
-        elif rewardType == "sum":
-            return np.sum(Gtplus1)
 
         else:
             raise ValueError(f"ERROR: rewardType {rewardType} "
@@ -327,7 +324,9 @@ class Agent:
         dfPrime = self.env.S
         Sprime = tr.from_numpy(dfPrime.values)
 
-        Rprime = self.rewardFunction(
+        Rprime = self.env.histRprime[-1]
+
+        Rline = self.rewardFunction(
             Gtplus1=self.env.histRprime,
             rewardType=self.rewardType
         )
@@ -340,7 +339,7 @@ class Agent:
         )
 
         # compute TD-error
-        delta = Rprime + self.gamma * Qprime - self.Q
+        delta = Rprime - Rline + self.gamma * Qprime - self.Q
 
         # reducing learning rate
         if self.lrScheduler is True:
@@ -379,30 +378,42 @@ class Agent:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    n = 5
-    fileName = "data/WING22/WING22_30min_OLHCV.csv"
-    initInvest = 56000*5
+    n = 2
+    fileName = "data/WING22/WING22_60min_OLHCV.csv"
+    initInvest = 5600*5
 
-    pls = []
-    for seed in range(1, 21):
+    saved = {
+        "histTradePLs": [],
+        "cumTradePLs": [],
+        "sumTradePLs": [],
+        "histRprime": [],
+        "meanSumTradePLs": []
+    }
+
+    histTradePLs = []
+    meanPL = []
+
+    for seed in range(1, 6):
+        # seed=1
         env = Environment(
             n=n,
             fileName=fileName,
-            initInvest=initInvest
+            initInvest=initInvest,
+            seed=seed
         )
 
         agent = Agent(
             env=env,
             n=n,
             initInvest=initInvest,
-            eta=0.01,
-            gamma=0.95,
+            eta=0.1,
+            gamma=1,
             epsilon=0.1,
             initType="uniform01",
-            rewardType="mean",
-            basisFctType="hypTanh",
+            rewardType="shapeRatio",
+            basisFctType="hypTanh123",
             typeFeatureVector="block",
-            lrScheduler=True,
+            lrScheduler=False,
             verbose=False,
             seed=seed,
         )
@@ -410,25 +421,19 @@ if __name__ == '__main__':
         while env.terminal is not True:
             agent.run()
 
-        pls.append(sum(env.histTradePLs))
+        saved["histTradePLs"].append(env.histTradePLs)
+        saved["cumTradePLs"].append([sum(env.histTradePLs[:i]) for i in range(len(env.histTradePLs))])
+        saved["sumTradePLs"].append(sum(env.histTradePLs))
         plt.plot([0]+[sum(env.histTradePLs[:i]) for i in range(len(env.histTradePLs))])
+        saved["histRprime"].append(env.histRprime)
+        # plt.plot([0] + [sum(env.histRprime[:i]) for i in range(len(env.histRprime))])
     plt.show()
 
-    print(np.mean(pls))
+    saved["meanSumTradePLs"].append(np.mean(saved["sumTradePLs"]))
 
-    plt.plot(abs(np.array(agent.deltas)))
+    a = np.mean(np.array(saved["cumTradePLs"]))
+    plt.plot(a)
     plt.show()
 
-"""
-60min
-n=5
-eta=0.001,
-gamma=0.95,
-epsilon=0.1,
-initType="uniform01",
-rewardType="mean",
-basisFctType="hypTanh",
-typeFeatureVector="block",
-lrScheduler=True
-2919.2105263157896
-"""
+    # plt.plot(np.array(agent.deltas))
+    # plt.show()

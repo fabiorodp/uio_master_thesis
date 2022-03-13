@@ -3,7 +3,7 @@
 
 import numpy as np
 from algo1 import Agent
-from env1 import Environment
+from env import Environment
 
 fileName = "data/WING22/WING22_60min_OLHCV.csv"
 

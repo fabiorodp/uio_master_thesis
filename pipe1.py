@@ -8,15 +8,15 @@ from env1 import Environment
 fileName = "data/WING22/WING22_60min_OLHCV.csv"
 
 params = {
-    "n": [2],  # , 5, 10, 50],
-    "basisFctType": ["sigmoid"],  # "hypTanh", "sigmoid", "relu"],
-    "rewardType": ["mean"],  # "sum"],  # "shapeRatio" not working
-    "eta": [0.1],  # 0.01, 0.001],
-    "gamma": [1],  # 0.95, 1],
-    "epsilon": [0.1],  # 0.2, 0.15, 0.10, 0.05],
+    "n": [2, 5, 10, 50],
+    "basisFctType": ["sigmoid", "hypTanh123", "hypTanh", "sigmoid", "relu"],
+    "rewardType": ["mean"],  # "shapeRatio" not working
+    "eta": [0.1, 0.01, 0.001],
+    "gamma": [0.9, 0.95, 1],
+    "epsilon": [0.1, 0.2, 0.15, 0.10, 0.05],
     "initType": ["uniform01"],
-    "lrScheduler": [False],  # False],
-    "seed": [i for i in range(1, 6)]
+    "lrScheduler": [True, False],
+    "seed": [i for i in range(1, 11)]
 }
 
 save = {
@@ -27,9 +27,10 @@ save = {
 }
 
 saved = {
-    "params": [],
     "histTradePLs": [],
+    "cumTradePLs": [],
     "sumTradePLs": [],
+    "histRprime": [],
     "meanSumTradePLs": []
 }
 
@@ -43,7 +44,9 @@ for a in params["n"]:
                             for h in params["lrScheduler"]:
                                 saved["params"].append((a, b, c, d, e, f, g, h))
                                 histTradePLs = []
+                                cumTradePLs = []
                                 sumTradePLs = []
+                                histRprime = []
 
                                 for i in params["seed"]:
                                     initInvest = 5600*5
@@ -80,8 +83,12 @@ for a in params["n"]:
                                     save["deltas"].append(agent.deltas)
 
                                     histTradePLs.append(env.histTradePLs)
+                                    cumTradePLs.append([sum(env.histTradePLs[:i]) for i in range(len(env.histTradePLs))])
                                     sumTradePLs.append(sum(env.histTradePLs))
+                                    histRprime.append(env.histRprime)
 
                                 saved["histTradePLs"].append(histTradePLs)
+                                saved["cumTradePLs"].append(histTradePLs)
                                 saved["sumTradePLs"].append(sumTradePLs)
+                                saved["histRprime"].append(histRprime)
                                 saved["meanSumTradePLs"].append(np.mean(sumTradePLs))

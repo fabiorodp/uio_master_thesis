@@ -27,6 +27,7 @@ save = {
 }
 
 saved = {
+    "params": [],
     "histTradePLs": [],
     "cumTradePLs": [],
     "sumTradePLs": [],

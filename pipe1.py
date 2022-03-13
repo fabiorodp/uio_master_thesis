@@ -1,6 +1,7 @@
 # Author: Fabio Rodrigues Pereira
 # E-mail: fabior@uio.no
 
+import numpy as np
 from algo1 import Agent
 from env1 import Environment
 
@@ -13,6 +14,7 @@ params = {
     "gamma": [0.90, 0.95, 1],
     "epsilon": [-1, 0.2, 0.15, 0.10, 0.05],
     "initType": ["uniform01"],
+    "lrScheduler": [True, False],
     "seed": [i for i in range(1, 21)]
 }
 
@@ -20,6 +22,11 @@ save = {
     "params": [],
     "histTradePLs": [],
     "deltas": [],
+}
+
+save1 = {
+    "params": [],
+    "meanPL": []
 }
 
 fileName = "data/WING22/WING22_60min_OLHCV.csv"
@@ -32,6 +39,9 @@ for a in params["n"]:
                 for e in params["gamma"]:
                     for f in params["epsilon"]:
                         for g in params["initType"]:
+                            save1["params"].append((a, b, c, d, e, f, g))
+                            meanPL = []
+
                             for h in params["seed"]:
                                 env = Environment(
                                     n=a,
@@ -61,3 +71,6 @@ for a in params["n"]:
                                 save["params"].append((a, b, c, d, e, f, g, h))
                                 save["histTradePLs"].append(env.histTradePLs)
                                 save["deltas"].append(agent.deltas)
+                                meanPL.append(sum(env.histTradePLs))
+
+                            save1["meanPL"].append(np.mean(meanPL))

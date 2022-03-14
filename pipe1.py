@@ -9,11 +9,11 @@ fileName = "data/WING22/WING22_60min_OLHCV.csv"
 
 params = {
     "n": [2, 5, 10, 50],
-    "basisFctType": ["sigmoid", "hypTanh123", "hypTanh", "sigmoid", "relu"],
+    "basisFctType": ["sigmoid", "hypTanh123", "hypTanh", "relu"],
     "rewardType": ["mean"],  # "shapeRatio" not working
     "eta": [0.1, 0.01, 0.001],
-    "gamma": [0.9, 0.95, 1],
-    "epsilon": [-1, 0.2, 0.15, 0.1, 0.05],
+    "gamma": [1, 0.95, 0.9],
+    "epsilon": [0.2, 0.15, 0.1, 0.05, -1],
     "initType": ["uniform01"],
     "lrScheduler": [True, False],
     "seed": [i for i in range(1, 11)]

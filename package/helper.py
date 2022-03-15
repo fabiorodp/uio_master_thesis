@@ -197,7 +197,7 @@ def parseIntoTickBars(ticker='WING22', numTicks=15000,
                 DateTime = datetime.strptime(DateTime, '%Y-%m-%d %H:%M:%S.%f')
                 dfFinal.append([DateTime, Open, High, Low, Close, Volume])
 
-            if (mod) != 0:
+            if mod != 0:
                 # print(f"{-(len(df) % numTicks)}:")
                 Open = df.iloc[-mod:, 0][0]
                 High = np.max(df.iloc[-mod:, 0].values)
@@ -225,7 +225,7 @@ def parseIntoTickBars(ticker='WING22', numTicks=15000,
 
 
 if __name__ == '__main__':
-    """getAnAsset(
+    getAnAsset(
         ticker='WINM21',
         in_folder='data/WINZ21/',
         out_folder='data/WINZ21/CSV'
@@ -236,11 +236,11 @@ if __name__ == '__main__':
         candles_periodicity='60min',
         in_folder='data/WINZ21/CSV/',
         out_folder='data/WINZ21/'
-    )"""
+    )
 
     parseIntoTickBars(
         ticker='WING22',
-        numTicks=15000,
+        numTicks=50000,
         in_folder='../data/WING22/CSV/',
         out_folder='../data/WING22/'
     )

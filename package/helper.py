@@ -218,7 +218,7 @@ def parseIntoTickBars(ticker='WING22', numTicks=15000,
     # creating csv data file
     if out_folder is not None:
         data.to_csv(
-            f'{out_folder}{ticker}_{numTicks}_OLHCV.csv', sep=';',
+            f'{out_folder}{ticker}_{numTicks}ticks_OLHCV.csv', sep=';',
             index_label=False)
 
     return data

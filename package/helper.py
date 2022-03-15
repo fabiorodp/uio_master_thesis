@@ -4,8 +4,10 @@
 import os
 import json
 import pickle
+import numpy as np
 import pandas as pd
 # import seaborn as sns
+from datetime import datetime
 # import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
@@ -120,7 +122,7 @@ def getAnAsset(ticker='PETR4', in_folder='data/', out_folder='data/'):
                 index_label=False)
 
 
-def parseRawIntoOHLCV(ticker='PETR4', candles_periodicity='1D',
+def parseIntoTimeBars(ticker='PETR4', candles_periodicity='1D',
                       in_folder='data/', out_folder=None):
     """
     This is a function to create candles data based on the ticker
@@ -163,16 +165,88 @@ def parseRawIntoOHLCV(ticker='PETR4', candles_periodicity='1D',
     return data
 
 
+def parseIntoTickBars(ticker='WING22', numTicks=15000,
+                      in_folder='../data/WING22/CSV/', out_folder=None):
+
+    data = pd.DataFrame()
+
+    for file in os.listdir(in_folder):
+        print(file)
+        columns = ["DateTime", "Open", "High", "Low", "Close", "Volume"]
+
+        if file.endswith(".csv") and file.startswith(f'{ticker}'):
+            df = pd.read_csv(in_folder + file, sep=';')
+            df.set_index(pd.DatetimeIndex(df['DateTime']), inplace=True)
+
+            # get infos
+            diff = len(df) // numTicks
+            mod = len(df) % numTicks
+            dfFinal = []
+
+            for i in range(diff):
+                # print(f"{i*numTicks}:{i*numTicks+numTicks}")
+                Open = df.iloc[i*numTicks:i*numTicks+numTicks, 0][0]
+                High = np.max(
+                    df.iloc[i*numTicks:i*numTicks+numTicks, 0].values)
+                Low = np.min(
+                    df.iloc[i * numTicks:i * numTicks + numTicks, 0].values)
+                Close = df.iloc[i*numTicks:i*numTicks+numTicks, 0][-1]
+                Volume = np.sum(
+                    df.iloc[i * numTicks:i * numTicks + numTicks, 1].values)
+                DateTime = df.iloc[i*numTicks:i*numTicks+numTicks, 2][-1]
+                DateTime = datetime.strptime(DateTime, '%Y-%m-%d %H:%M:%S.%f')
+                dfFinal.append([DateTime, Open, High, Low, Close, Volume])
+
+            if (mod) != 0:
+                # print(f"{-(len(df) % numTicks)}:")
+                Open = df.iloc[-mod:, 0][0]
+                High = np.max(df.iloc[-mod:, 0].values)
+                Low = np.min(df.iloc[-mod:, 0].values)
+                Close = df.iloc[-mod:, 0][-1]
+                Volume = np.sum(df.iloc[-mod:, 1].values)
+                DateTime = df.iloc[-mod:, 2][-1]
+                DateTime = datetime.strptime(DateTime, '%Y-%m-%d %H:%M:%S.%f')
+                dfFinal.append([DateTime, Open, High, Low, Close, Volume])
+
+            dfFinal = pd.DataFrame(dfFinal, columns=columns)
+            dfFinal.set_index(pd.DatetimeIndex(
+                dfFinal['DateTime']), inplace=True)
+            dfFinal.drop(['DateTime'], axis=1, inplace=True)
+
+            data = pd.concat([data, dfFinal])
+
+    # creating csv data file
+    if out_folder is not None:
+        data.to_csv(
+            f'{out_folder}{ticker}_{numTicks}_OLHCV.csv', sep=';',
+            index_label=False)
+
+    return data
+
+
 if __name__ == '__main__':
-    getAnAsset(
-        ticker='WINZ21',
+    """getAnAsset(
+        ticker='WINM21',
         in_folder='data/WINZ21/',
         out_folder='data/WINZ21/CSV'
     )
 
-    parseRawIntoOHLCV(
+    parseIntoTimeBars(
+        ticker='WINZ21',
+        candles_periodicity='60min',
+        in_folder='data/WINZ21/CSV/',
+        out_folder='data/WINZ21/'
+    )"""
+
+    parseIntoTickBars(
         ticker='WING22',
-        candles_periodicity='5min',
-        in_folder='data/WING22/CSV/day1/',
-        out_folder='data/WING22/CSV/day1/'
+        numTicks=15000,
+        in_folder='../data/WING22/CSV/',
+        out_folder='../data/WING22/'
+    )
+
+    savePythonObject(
+        pathAndFileName="data/saved_relu_WING22_60min",
+        pythonObject=saved,
+        savingType="json"
     )

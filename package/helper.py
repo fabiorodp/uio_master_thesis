@@ -169,59 +169,57 @@ def parseIntoTickBars(ticker='WING22', numTicks=15000,
                       in_folder='../data/WING22/CSV/', out_folder=None):
 
     data = pd.DataFrame()
-
     for file in os.listdir(in_folder):
         print(file)
-        columns = ["DateTime", "Open", "High", "Low", "Close", "Volume"]
 
         if file.endswith(".csv") and file.startswith(f'{ticker}'):
             df = pd.read_csv(in_folder + file, sep=';')
             df.set_index(pd.DatetimeIndex(df['DateTime']), inplace=True)
+            data = pd.concat([data, df])
 
-            # get infos
-            diff = len(df) // numTicks
-            mod = len(df) % numTicks
-            dfFinal = []
+    # get infos
+    columns = ["DateTime", "Open", "High", "Low", "Close", "Volume"]
+    diff = len(data) // numTicks
+    mod = len(data) % numTicks
+    dfFinal = []
 
-            for i in range(diff):
-                # print(f"{i*numTicks}:{i*numTicks+numTicks}")
-                Open = df.iloc[i*numTicks:i*numTicks+numTicks, 0][0]
-                High = np.max(
-                    df.iloc[i*numTicks:i*numTicks+numTicks, 0].values)
-                Low = np.min(
-                    df.iloc[i * numTicks:i * numTicks + numTicks, 0].values)
-                Close = df.iloc[i*numTicks:i*numTicks+numTicks, 0][-1]
-                Volume = np.sum(
-                    df.iloc[i * numTicks:i * numTicks + numTicks, 1].values)
-                DateTime = df.iloc[i*numTicks:i*numTicks+numTicks, 2][-1]
-                DateTime = datetime.strptime(DateTime, '%Y-%m-%d %H:%M:%S.%f')
-                dfFinal.append([DateTime, Open, High, Low, Close, Volume])
+    for i in range(diff):
+        # print(f"{i*numTicks}:{i*numTicks+numTicks}")
+        Open = data.iloc[i * numTicks:i * numTicks + numTicks, 0][0]
+        High = np.max(
+            data.iloc[i * numTicks:i * numTicks + numTicks, 0].values)
+        Low = np.min(
+            data.iloc[i * numTicks:i * numTicks + numTicks, 0].values)
+        Close = data.iloc[i * numTicks:i * numTicks + numTicks, 0][-1]
+        Volume = np.sum(
+            data.iloc[i * numTicks:i * numTicks + numTicks, 1].values)
+        DateTime = data.iloc[i * numTicks:i * numTicks + numTicks, 2][-1]
+        DateTime = datetime.strptime(DateTime, '%Y-%m-%d %H:%M:%S.%f')
+        dfFinal.append([DateTime, Open, High, Low, Close, Volume])
 
-            if mod != 0:
-                # print(f"{-(len(df) % numTicks)}:")
-                Open = df.iloc[-mod:, 0][0]
-                High = np.max(df.iloc[-mod:, 0].values)
-                Low = np.min(df.iloc[-mod:, 0].values)
-                Close = df.iloc[-mod:, 0][-1]
-                Volume = np.sum(df.iloc[-mod:, 1].values)
-                DateTime = df.iloc[-mod:, 2][-1]
-                DateTime = datetime.strptime(DateTime, '%Y-%m-%d %H:%M:%S.%f')
-                dfFinal.append([DateTime, Open, High, Low, Close, Volume])
+    if mod != 0:
+        # print(f"{-(len(df) % numTicks)}:")
+        Open = data.iloc[-mod:, 0][0]
+        High = np.max(data.iloc[-mod:, 0].values)
+        Low = np.min(data.iloc[-mod:, 0].values)
+        Close = data.iloc[-mod:, 0][-1]
+        Volume = np.sum(data.iloc[-mod:, 1].values)
+        DateTime = data.iloc[-mod:, 2][-1]
+        DateTime = datetime.strptime(DateTime, '%Y-%m-%d %H:%M:%S.%f')
+        dfFinal.append([DateTime, Open, High, Low, Close, Volume])
 
-            dfFinal = pd.DataFrame(dfFinal, columns=columns)
-            dfFinal.set_index(pd.DatetimeIndex(
-                dfFinal['DateTime']), inplace=True)
-            dfFinal.drop(['DateTime'], axis=1, inplace=True)
-
-            data = pd.concat([data, dfFinal])
+    dfFinal = pd.DataFrame(dfFinal, columns=columns)
+    dfFinal.set_index(pd.DatetimeIndex(
+        dfFinal['DateTime']), inplace=True)
+    dfFinal.drop(['DateTime'], axis=1, inplace=True)
 
     # creating csv data file
     if out_folder is not None:
-        data.to_csv(
+        dfFinal.to_csv(
             f'{out_folder}{ticker}_{numTicks}ticks_OLHCV.csv', sep=';',
             index_label=False)
 
-    return data
+    return dfFinal
 
 
 if __name__ == '__main__':
@@ -240,13 +238,13 @@ if __name__ == '__main__':
 
     parseIntoTickBars(
         ticker='WING22',
-        numTicks=50000,
+        numTicks=250000,
         in_folder='../data/WING22/CSV/',
         out_folder='../data/WING22/'
     )
 
     savePythonObject(
-        pathAndFileName="data/saved_relu_WING22_60min",
+        pathAndFileName="data/saved_sigmoid_WINZ21_60min",
         pythonObject=saved,
         savingType="json"
     )

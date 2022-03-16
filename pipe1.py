@@ -5,18 +5,18 @@ import numpy as np
 from algo1 import Agent
 from env import Environment
 
-fileName = "data/WING22/WING22_60min_OLHCV.csv"
+fileName = "data/WINM21/WINM21_60min_OLHCV.csv"
 
 params = {
     "n": [2, 5, 10, 50],
-    "basisFctType": ["sigmoid", "hypTanh123", "hypTanh", "relu"],
+    "basisFctType": ["sigmoid"],
     "rewardType": ["mean"],  # "shapeRatio" not working
     "eta": [0.1, 0.01, 0.001],
     "gamma": [1, 0.95, 0.9],
     "epsilon": [0.2, 0.15, 0.1, 0.05, -1],
     "initType": ["uniform01"],
     "lrScheduler": [True, False],
-    "seed": [i for i in range(1, 11)]
+    "seed": [i for i in range(1, 101)]
 }
 
 save = {
@@ -89,7 +89,7 @@ for a in params["n"]:
                                     histRprime.append(env.histRprime)
 
                                 saved["histTradePLs"].append(histTradePLs)
-                                saved["cumTradePLs"].append(histTradePLs)
+                                saved["cumTradePLs"].append(cumTradePLs)
                                 saved["sumTradePLs"].append(sumTradePLs)
                                 saved["histRprime"].append(histRprime)
                                 saved["meanSumTradePLs"].append(np.mean(sumTradePLs))

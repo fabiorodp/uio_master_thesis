@@ -163,9 +163,6 @@ class Environment:
                     lnTradePL=self.lnTradePL
                 )
 
-            """elif self.tradeStatus == 0:  # on a long trade
-                pass"""
-
         elif A == 1:  # limit long
             if self.tradeStatus == 0:  # new trade opened
                 self.tradeStatus = 1

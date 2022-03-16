@@ -393,8 +393,7 @@ if __name__ == '__main__':
     histTradePLs = []
     meanPL = []
 
-    for seed in range(1, 6):
-        # seed=1
+    for seed in range(1, 100):
         env = Environment(
             n=n,
             fileName=fileName,
@@ -407,11 +406,11 @@ if __name__ == '__main__':
             n=n,
             initInvest=initInvest,
             eta=0.1,
-            gamma=1,
-            epsilon=0.1,
+            gamma=0.9,
+            epsilon=-1,
             initType="uniform01",
-            rewardType="shapeRatio",
-            basisFctType="hypTanh123",
+            rewardType="mean",
+            basisFctType="sigmoid",
             typeFeatureVector="block",
             lrScheduler=False,
             verbose=False,
@@ -427,13 +426,10 @@ if __name__ == '__main__':
         plt.plot([0]+[sum(env.histTradePLs[:i]) for i in range(len(env.histTradePLs))])
         saved["histRprime"].append(env.histRprime)
         # plt.plot([0] + [sum(env.histRprime[:i]) for i in range(len(env.histRprime))])
+    plt.grid()
     plt.show()
 
     saved["meanSumTradePLs"].append(np.mean(saved["sumTradePLs"]))
-
-    a = np.mean(np.array(saved["cumTradePLs"]))
-    plt.plot(a)
-    plt.show()
 
     # plt.plot(np.array(agent.deltas))
     # plt.show()

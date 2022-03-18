@@ -21,9 +21,9 @@ class Agent:
         return tr.log(currentPrice / previousPrice).item()
 
     @staticmethod
-    def basisFunction(x: float, basisFctType: str = "hypTanh123") -> float:
+    def basisFunction(x: float, basisFctType: str = "sigmoid") -> float:
         """Basis function."""
-        if basisFctType == "hypTanh123":
+        if basisFctType == "sigmoid123":
             a, b, c, d = 2, 1, 10**15, -1
             return (a / (1 + b * np.exp(-c * x))) - d
 
@@ -79,7 +79,7 @@ class Agent:
 
     def __init__(self, env, n, initInvest=5600*5, eta=0.05, gamma=0.95,
                  epsilon=0.1, initType="zeros", rewardType="shapeRatio",
-                 basisFctType="hypTanh123", typeFeatureVector="block",
+                 basisFctType="sigmoid", typeFeatureVector="block",
                  tradeRandEpsilon=False, lrScheduler=False, verbose=False,
                  seed=0):
 

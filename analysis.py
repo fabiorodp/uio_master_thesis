@@ -77,3 +77,6 @@ for obj in objects:
     plt.plot(opt/100)
     plt.grid()
     plt.show()
+
+# b = np.argsort(saved["meanSumTradePLs"])
+# c = np.sort(saved["meanSumTradePLs"])

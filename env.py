@@ -106,7 +106,13 @@ class Environment:
 
         C = Sprime.iloc[-2, 3]
         Cprime = Sprime.iloc[-1, 3]
-        timePrime = datetime.strptime(Sprime.index[-1], '%Y-%m-%d %H:%M:%S')
+
+        try:
+            timePrime = datetime.strptime(Sprime.index[-1],
+                                          '%Y-%m-%d %H:%M:%S')
+        except:
+            timePrime = datetime.strptime(Sprime.index[-1],
+                                          '%Y-%m-%d %H:%M:%S.%f')
         print(timePrime)
 
         if A == -1:  # limit short

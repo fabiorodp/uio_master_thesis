@@ -5,7 +5,7 @@ import numpy as np
 from algo1 import Agent
 from env import Environment
 
-fileName = "data/WINM21/WINM21_60min_OLHCV.csv"
+fileName = "data/WINM21/WINM21_500000ticks_OLHCV.csv"
 
 params = {
     "n": [2, 5, 10, 50],

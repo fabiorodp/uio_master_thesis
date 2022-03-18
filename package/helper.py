@@ -178,7 +178,7 @@ def parseIntoTickBars(ticker='WING22', numTicks=15000,
             data = pd.concat([data, df])
 
     # get infos
-    columns = ["DateTime", "Open", "High", "Low", "Close", "Volume"]
+    columns = ["DateTime", "open", "high", "low", "close", "volume"]
     diff = len(data) // numTicks
     mod = len(data) % numTicks
     dfFinal = []
@@ -244,7 +244,7 @@ if __name__ == '__main__':
     )
 
     savePythonObject(
-        pathAndFileName="data/saved_sigmoid_WINZ21_60min",
+        pathAndFileName="data/saved_sigmoid_WINJ21_500000ticks",
         pythonObject=saved,
         savingType="json"
     )

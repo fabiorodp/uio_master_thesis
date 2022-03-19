@@ -2,19 +2,19 @@
 # E-mail: fabior@uio.no
 
 import numpy as np
-import pandas as pd
+# import pandas as pd
 # import seaborn as sns
 import matplotlib.pyplot as plt
 from package.helper import readPythonObjectFromFile
 
 
 files = [
-    "data/saved_sigmoid_WING22_60min.json",
-    "data/saved_sigmoid_WINZ21_60min.json",
-    "data/saved_sigmoid_WINV21_60min.json",
-    "data/saved_sigmoid_WINQ21_60min.json",
-    "data/saved_sigmoid_WINM21_60min.json",
-    "data/saved_sigmoid_WINJ21_60min.json"
+    "results/WING22/saved_sigmoid_WING22_60min.json",
+    "results/WINZ21/saved_sigmoid_WINZ21_60min.json",
+    "results/WINV21/saved_sigmoid_WINV21_60min.json",
+    "results/WINQ21/saved_sigmoid_WINQ21_60min.json",
+    "results/WINM21/saved_sigmoid_WINM21_60min.json",
+    "results/WINJ21/saved_sigmoid_WINJ21_60min.json"
 ]
 
 saved_WING22 = readPythonObjectFromFile(

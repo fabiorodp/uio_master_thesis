@@ -113,7 +113,7 @@ class Environment:
         except:
             timePrime = datetime.strptime(Sprime.index[-1],
                                           '%Y-%m-%d %H:%M:%S.%f')
-        print(timePrime)
+        # print(timePrime)
 
         if A == -1:  # limit short
             if self.tradeStatus == 0:  # new trade opened

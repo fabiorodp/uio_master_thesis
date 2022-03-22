@@ -244,7 +244,7 @@ if __name__ == '__main__':
     )
 
     savePythonObject(
-        pathAndFileName="data/saved_sigmoid_WINJ21_500000ticks",
+        pathAndFileName="results/WINV21/saved_sigmoid_WINV21_250000ticks",
         pythonObject=saved,
         savingType="json"
     )

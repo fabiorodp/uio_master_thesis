@@ -1,138 +1,289 @@
 # Author: Fabio Rodrigues Pereira
 # E-mail: fabior@uio.no
 
-from algorithm1 import Agent
-from environment3a import Environment
+import numpy as np
+from tqdm import tqdm
+from env import Environment
+from algorithms import SARSA, QLearn, GreedyGQ
 
-
-"""params = {
-    "n": [2, 5, 10, 15, 30, 60, 90, 120],
-    "basisFctType": ["hypTanh123", "tanh", "sigmoid", "relu"],
-    "rewardType": ["shapeRatio", "mean", "sum"],
-    "eta": [0.5, 0.1, 0.05, 0.001, 0.0005, 0.0001, 0.00005, 0.000001],
-    "gamma": [0.25, 0.5, 0.75, 0.90, 0.95, 0.975, 1],
-    "epsilon": [0.25, 0.2, 0.15, 0.10, 0.05, 0.025, 0.01],
-    "tradeRandEpsilon": [True, False],
-    "initType": ["zeros", "uniform01"]
-}"""
+fileName = "data/WING22/WING22_60min_OLHCV.csv"
+initInvest = 5600 * 5
 
 params = {
-    "n": [2, 5, 10],  # , 60, 90],
-    "basisFctType": ["hypTanh123", "hypTanh", "sigmoid", "relu"],
-    "rewardType": ["shapeRatio", "mean"],  # , "sum"],
-    "eta": [0.1, 0.001, 0.0001],
-    "gamma": [0.90, 0.95, 1],
-    "epsilon": [0.2, 0.15, 0.10, 0.05],
-    "tradeRandEpsilon": [True, False],
-    "initType": ["zeros", "uniform01"]
+    "rlType": ["SARSA", "QLearn", "GreedyGQ"],
+    "n": [2, 5, 10, 25, 50],
+    "basisFctType": ["sigmoid", "sigmoid123", "hypTanh"],
+    "rewardType": ["meanDiff", "immediate"],
+    "eta": [0.1, 0.01, 0.001, 0.0001],
+    "zeta": [0.1, 0.01, 0.001, 0.0001],
+    "gamma": [1, 0.95, 0.9],
+    "epsilon": [0.15, 0.1, 0.05],
+    "initType": ["uniform01", "zeros"],
+    "lrScheduler": [True, False],
+    "seed": [i for i in range(1, 101)]
 }
 
 save = {
     "params": [],
-    "histR": [],
-    "sumTradePL": [],
-    "sumTradePL2": [],
-    "deltas": [],
-    "cumPLs": []
+    "histTradePLs": [],
+    "sumTradePLs": [],
+    "TDErrors": [],
 }
 
-fileName = "data/WING22/WING22_30min_OLHCV.csv"
+saved = {
+    "params": [],
+    "histTradePLs": [],
+    "cumTradePLs": [],
+    "sumTradePLs": [],
+    "histRprime": [],
+    "meanSumTradePLs": []
+}
 
-for a in params["n"]:
-    for b in params["basisFctType"]:
-        for c in params["rewardType"]:
-            for d in params["eta"]:
-                for e in params["gamma"]:
-                    for f in params["epsilon"]:
-                        for g in params["tradeRandEpsilon"]:
-                            for h in params["initType"]:
+for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
 
-                                env = Environment(
-                                    n=a,
-                                    fileName=fileName
-                                )
+    if agent == "SARSA":
+        for a in tqdm(params["n"], desc="Loading n for SARSA..."):
+            for b in params["basisFctType"]:
+                for c in params["rewardType"]:
+                    for d in params["eta"]:
+                        for e in params["gamma"]:
+                            for f in params["epsilon"]:
+                                for g in params["initType"]:
+                                    for h in params["lrScheduler"]:
+                                        saved["params"].append((a, b, c, d,
+                                                                e, f, g, h))
+                                        histTradePLs = []
+                                        cumTradePLs = []
+                                        sumTradePLs = []
+                                        histRprime = []
 
-                                agent = Agent(
-                                    env=env,
-                                    n=a,
-                                    eta=d,
-                                    gamma=e,
-                                    epsilon=f,
-                                    initType=h,
-                                    rewardType=c,
-                                    basisFctType=b,
-                                    typeFeatureVector="block",
-                                    tradeRandEpsilon=g,
-                                    verbose=False,
-                                    seed=20,
-                                )
+                                        for i in params["seed"]:
 
-                                while env.terminal is not True:
-                                    agent.run()
+                                            env = Environment(
+                                                n=a,
+                                                fileName=fileName,
+                                                initInvest=initInvest,
+                                                seed=i
+                                            )
 
-                                # fixing agent.memory
-                                for i in range(len(agent.memory)):
-                                    if agent.memory["tradeStatus"][i] == -1:
-                                        agent.memory["tradePL"][i] = \
-                                        agent.memory["entryPrice"][i] - \
-                                        agent.memory["close"][i]
-                                    elif agent.memory["tradeStatus"][i] == 1:
-                                        agent.memory["tradePL"][i] = \
-                                        agent.memory["entryPrice"][i] + \
-                                        agent.memory["close"][i]
-                                    elif agent.memory["tradeStatus"][i] == 0:
-                                        agent.memory["tradePL"][i] = 0
+                                            agent = SARSA(
+                                                env=env,
+                                                n=a,
+                                                initInvest=initInvest,
+                                                eta=d,
+                                                gamma=e,
+                                                epsilon=f,
+                                                initType=g,
+                                                rewardType=c,
+                                                basisFctType=b,
+                                                typeFeatureVector="block",
+                                                lrScheduler=h,
+                                                verbose=False,
+                                                seed=i,
+                                            )
 
-                                cumReturn, taus = [], []
-                                for i in range(len(agent.memory)):
-                                    if (agent.memory["tradeStatus"][i] == 0) and (agent.memory["A"][i] == -1):
-                                        cumReturn.append(agent.memory["tradePL"][i-1])
-                                        taus.append(agent.memory["tau"][i - 1])
+                                            while env.terminal is not True:
+                                                agent.run()
 
-                                    elif (agent.memory["tradeStatus"][i] == 0) and (agent.memory["A"][i] == 1):
-                                        cumReturn.append(agent.memory["tradePL"][i-1])
-                                        taus.append(agent.memory["tau"][i - 1])
+                                            save["params"].append(
+                                                (a, b, c, d, e, f, g, h, i))
 
-                                if agent.memory["tau"][-1] != 0:
-                                    cumReturn.append(
-                                        agent.memory["tradePL"][-1])
-                                    taus.append(agent.memory["tau"][1])
+                                            save["histTradePLs"].append(
+                                                env.histTradePLs)
 
-                                save["params"].append((a, b, c, d, e, f, g, h))
-                                save["histR"].append(env.histR)
-                                save["sumTradePL"].append(sum(cumReturn))
-                                save["sumTradePL2"].append(sum(env.portfolioPLs))
-                                save["deltas"].append(agent.deltas)
-                                save["cumPLs"].append(cumReturn)
+                                            save["sumTradePLs"].append(
+                                                sum(env.histTradePLs))
 
-if __name__ == '__main__':
-    import numpy as np
-    import pandas as pd
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-    import plotly.graph_objects as go
-    from package.helper import savePythonObject, readPythonObjectFromFile
+                                            save["TDErrors"].append(
+                                                agent.TDErrors)
 
-    # saving and/or loading data
-    savePythonObject("saved", save, "json")
-    saved = readPythonObjectFromFile("data/saved.json", "json")
+                                            histTradePLs.append(
+                                                env.histTradePLs)
 
-    # analysing data
-    a = np.sort(saved["sumTradePL"])
-    b = np.argsort(saved["sumTradePL"])
+                                            cumTradePLs.append(
+                                                [sum(env.histTradePLs[:i])
+                                                 for i in range(
+                                                    len(env.histTradePLs))])
 
-    idx = 1115
-    saved["params"][idx]
-    sum(saved["cumPLs"][idx])
+                                            sumTradePLs.append(
+                                                sum(env.histTradePLs))
 
-    plt.plot([0]+[sum(saved["cumPLs"][idx][:i]) for i in range(1, len(saved["cumPLs"][idx])+1)])
-    plt.show()
+                                            histRprime.append(env.histRprime)
 
-    plt.plot(saved["cumPLs"][idx])
-    plt.show()
+                                        saved["histTradePLs"].append(
+                                            histTradePLs)
 
-    np.sum(np.array(saved["cumPLs"][idx]) > 0) / len(saved["cumPLs"][idx])
-    np.sum(np.array(saved["cumPLs"][idx]) <= 0) / len(saved["cumPLs"][idx])
+                                        saved["cumTradePLs"].append(
+                                            cumTradePLs)
 
-    plt.plot(abs(np.array(saved["deltas"][idx])))
-    plt.show()
+                                        saved["sumTradePLs"].append(
+                                            sumTradePLs)
+
+                                        saved["histRprime"].append(histRprime)
+
+                                        saved["meanSumTradePLs"].append(
+                                            np.mean(sumTradePLs))
+
+    elif agent == "QLearn":
+        for a in tqdm(params["n"], desc="Loading n for QLearn..."):
+            for b in params["basisFctType"]:
+                for c in params["rewardType"]:
+                    for d in params["eta"]:
+                        for e in params["gamma"]:
+                            for h in params["lrScheduler"]:
+                                saved["params"].append((a, b, c, d,
+                                                        e, h))
+                                histTradePLs = []
+                                cumTradePLs = []
+                                sumTradePLs = []
+                                histRprime = []
+
+                                for i in params["seed"]:
+
+                                    env = Environment(
+                                        n=a,
+                                        fileName=fileName,
+                                        initInvest=initInvest,
+                                        seed=i
+                                    )
+
+                                    agent = QLearn(
+                                        env=env,
+                                        n=a,
+                                        initInvest=initInvest,
+                                        eta=d,
+                                        gamma=e,
+                                        initType="uniform01",
+                                        rewardType=c,
+                                        basisFctType=b,
+                                        typeFeatureVector="block",
+                                        lrScheduler=h,
+                                        verbose=False,
+                                        seed=i,
+                                    )
+
+                                    while env.terminal is not True:
+                                        agent.run()
+
+                                    save["params"].append(
+                                        (a, b, c, d, e, h, i))
+
+                                    save["histTradePLs"].append(
+                                        env.histTradePLs)
+
+                                    save["sumTradePLs"].append(
+                                        sum(env.histTradePLs))
+
+                                    save["TDErrors"].append(
+                                        agent.TDErrors)
+
+                                    histTradePLs.append(
+                                        env.histTradePLs)
+
+                                    cumTradePLs.append(
+                                        [sum(env.histTradePLs[:i])
+                                         for i in range(
+                                            len(env.histTradePLs))])
+
+                                    sumTradePLs.append(
+                                        sum(env.histTradePLs))
+
+                                    histRprime.append(env.histRprime)
+
+                                saved["histTradePLs"].append(
+                                    histTradePLs)
+
+                                saved["cumTradePLs"].append(
+                                    cumTradePLs)
+
+                                saved["sumTradePLs"].append(
+                                    sumTradePLs)
+
+                                saved["histRprime"].append(histRprime)
+
+                                saved["meanSumTradePLs"].append(
+                                    np.mean(sumTradePLs))
+
+    elif agent == "GreedyGQ":
+        for a in tqdm(params["n"], desc="Loading n for GreedyGQ..."):
+            for b in params["basisFctType"]:
+                for c in params["rewardType"]:
+                    for d in params["eta"]:
+                        for e in params["gamma"]:
+                            for f in params["zeta"]:
+                                for h in params["lrScheduler"]:
+                                    saved["params"].append((a, b, c, d,
+                                                            e, f, h))
+                                    histTradePLs = []
+                                    cumTradePLs = []
+                                    sumTradePLs = []
+                                    histRprime = []
+
+                                    for i in params["seed"]:
+
+                                        env = Environment(
+                                            n=a,
+                                            fileName=fileName,
+                                            initInvest=initInvest,
+                                            seed=i
+                                        )
+
+                                        agent = GreedyGQ(
+                                            env=env,
+                                            n=a,
+                                            initInvest=initInvest,
+                                            eta=d,
+                                            gamma=e,
+                                            zeta=f,
+                                            initType="uniform01",
+                                            rewardType=c,
+                                            basisFctType=b,
+                                            typeFeatureVector="block",
+                                            lrScheduler=h,
+                                            verbose=False,
+                                            seed=i,
+                                        )
+
+                                        while env.terminal is not True:
+                                            agent.run()
+
+                                        save["params"].append(
+                                            (a, b, c, d, e, f, h, i))
+
+                                        save["histTradePLs"].append(
+                                            env.histTradePLs)
+
+                                        save["sumTradePLs"].append(
+                                            sum(env.histTradePLs))
+
+                                        save["TDErrors"].append(
+                                            agent.TDErrors)
+
+                                        histTradePLs.append(
+                                            env.histTradePLs)
+
+                                        cumTradePLs.append(
+                                            [sum(env.histTradePLs[:i])
+                                             for i in range(
+                                                len(env.histTradePLs))])
+
+                                        sumTradePLs.append(
+                                            sum(env.histTradePLs))
+
+                                        histRprime.append(env.histRprime)
+
+                                    saved["histTradePLs"].append(
+                                        histTradePLs)
+
+                                    saved["cumTradePLs"].append(
+                                        cumTradePLs)
+
+                                    saved["sumTradePLs"].append(
+                                        sumTradePLs)
+
+                                    saved["histRprime"].append(histRprime)
+
+                                    saved["meanSumTradePLs"].append(
+                                        np.mean(sumTradePLs))
+
+    print("Complete.")

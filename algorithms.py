@@ -296,15 +296,15 @@ class QLearn:
     def lrSchedulerFct(self, TDError):
         if self.lrScheduler is True:
             if (len(self.TDErrors) >= 10) and \
-                    (TDError > self.TDErrors[-9]) and \
-                    (TDError > self.TDErrors[-8]) and \
-                    (TDError > self.TDErrors[-7]) and \
-                    (TDError > self.TDErrors[-6]) and \
-                    (TDError > self.TDErrors[-5]) and \
-                    (TDError > self.TDErrors[-4]) and \
-                    (TDError > self.TDErrors[-3]) and \
-                    (TDError > self.TDErrors[-2]) and \
-                    (TDError > self.TDErrors[-1]):
+                    (abs(TDError) > abs(self.TDErrors[-9])) and \
+                    (abs(TDError) > abs(self.TDErrors[-8])) and \
+                    (abs(TDError) > abs(self.TDErrors[-7])) and \
+                    (abs(TDError) > abs(self.TDErrors[-6])) and \
+                    (abs(TDError) > abs(self.TDErrors[-5])) and \
+                    (abs(TDError) > abs(self.TDErrors[-4])) and \
+                    (abs(TDError) > abs(self.TDErrors[-3])) and \
+                    (abs(TDError) > abs(self.TDErrors[-2])) and \
+                    (abs(TDError) > abs(self.TDErrors[-1])):
                 self.eta /= 2
 
     def run(self) -> None:
@@ -597,7 +597,7 @@ if __name__ == '__main__':
         agent = GreedyGQ(
             env=env,
             n=n,
-            seed=seed,
+            seed=seed
         )
 
         while env.terminal is not True:

@@ -94,10 +94,10 @@ class QLearn:
         else:
             raise ValueError(f"ERROR: initType {initType} not recognized!")
 
-    def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=1.0,
+    def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=0.95,
                  initType="uniform01", rewardType="meanDiff",
                  basisFctType="sigmoid", typeFeatureVector="block",
-                 lrScheduler=True, verbose=False, seed=0):
+                 lrScheduler=False, verbose=False, seed=0):
 
         # agent's variables
         self.env = env
@@ -504,10 +504,10 @@ class GreedyGQ(QLearn):
         else:
             raise ValueError(f"ERROR: initType {initType} not recognized!")
 
-    def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=1.0,
+    def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=0.95,
                  initType="uniform01", rewardType="meanDiff", zeta=0.01,
                  basisFctType="sigmoid", typeFeatureVector="block",
-                 lrScheduler=True, verbose=False, seed=0):
+                 lrScheduler=False, verbose=False, seed=0):
 
         super().__init__(env, n, initInvest, eta, gamma, initType,
                          rewardType, basisFctType, typeFeatureVector,
@@ -577,9 +577,8 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from tqdm import tqdm
 
-    n = 25
+    n = 5
     fileName = "data/WING22/WING22_60min_OLHCV.csv"
-    initInvest = 5600*5
 
     saved = {
         "TDErrors": [],
@@ -592,14 +591,12 @@ if __name__ == '__main__':
         env = Environment(
             n=n,
             fileName=fileName,
-            initInvest=initInvest,
-            seed=seed
+            seed=seed,
         )
 
         agent = GreedyGQ(
             env=env,
             n=n,
-            initInvest=initInvest,
             seed=seed,
         )
 
@@ -614,3 +611,13 @@ if __name__ == '__main__':
     plt.show()
 
     saved["meanSumTradePLs"].append(np.mean(saved["sumTradePLs"]))
+
+    # histRprime trajectories mean
+    mean = np.zeros(shape=(len(saved["histRprime"][0]), ))
+    for e in saved["histRprime"]:
+        mean += np.array(e)
+
+    mean /= 100
+    plt.plot(mean)
+    plt.grid()
+    plt.show()

@@ -52,7 +52,7 @@ class Environment:
         }
 
     def __init__(self, n, fileName="data/WING22_1min_OLHCV.csv",
-                 initInvest=0, seed=0):
+                 initInvest=5600*5, seed=0):
         # seeding the experiment
         self.seed = seed
         if seed != 0:

@@ -94,10 +94,10 @@ class QLearn:
         else:
             raise ValueError(f"ERROR: initType {initType} not recognized!")
 
-    def __init__(self, env, n, initInvest=5600*5, eta=0.05, gamma=0.95,
-                 initType="uniform01", rewardType="mean",
+    def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=1.0,
+                 initType="uniform01", rewardType="meanDiff",
                  basisFctType="sigmoid", typeFeatureVector="block",
-                 lrScheduler=False, verbose=False, seed=0):
+                 lrScheduler=True, verbose=False, seed=0):
 
         # agent's variables
         self.env = env
@@ -377,10 +377,10 @@ class SARSA(QLearn):
         else:
             raise ValueError(f"ERROR: initType {initType} not recognized!")
 
-    def __init__(self, env, n, initInvest=5600*5, eta=0.05, gamma=0.95,
-                 epsilon=0.1, initType="uniform01", rewardType="mean",
+    def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=1.0,
+                 epsilon=0.1, initType="uniform01", rewardType="meanDiff",
                  basisFctType="sigmoid", typeFeatureVector="block",
-                 lrScheduler=False, verbose=False, seed=0):
+                 lrScheduler=True, verbose=False, seed=0):
         super().__init__(env, n, initInvest, eta, gamma, initType,
                          rewardType, basisFctType, typeFeatureVector,
                          lrScheduler, verbose, seed)
@@ -489,34 +489,32 @@ class SARSA(QLearn):
 class GreedyGQ(QLearn):
 
     @staticmethod
-    def initWeights(initType, dimensions):
-        """Initializing weight vector..."""
+    def initKappa(initType, dimensions):
+        """Initializing kappa weight vector..."""
         if initType == "zeros":
             raise ValueError(f"ERROR: initType {initType} not allowed for "
                              f"off-policy methods!")
 
         elif initType == "uniform01":
-            wVector = tr.zeros((dimensions, 1), dtype=tr.double)
-            wVector = wVector.uniform_()
-
             kappaVector = tr.zeros((dimensions, 1), dtype=tr.double)
             kappaVector = kappaVector.uniform_()
 
-            return wVector, kappaVector
+            return kappaVector
 
         else:
             raise ValueError(f"ERROR: initType {initType} not recognized!")
 
-    def __init__(self, env, n, initInvest=5600*5, eta=0.05, gamma=0.95,
-                 initType="uniform01", rewardType="mean", zeta=0.01,
+    def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=1.0,
+                 initType="uniform01", rewardType="meanDiff", zeta=0.01,
                  basisFctType="sigmoid", typeFeatureVector="block",
-                 lrScheduler=False, verbose=False, seed=0):
+                 lrScheduler=True, verbose=False, seed=0):
+
         super().__init__(env, n, initInvest, eta, gamma, initType,
                          rewardType, basisFctType, typeFeatureVector,
                          lrScheduler, verbose, seed)
 
-        self.w, self.kappa = self.initWeights(self.initType, self.d)
         self.zeta = zeta
+        self.kappa = self.initKappa(self.initType, self.d)
 
     def run(self):
         """Run computations for the current time-step..."""
@@ -577,23 +575,20 @@ class GreedyGQ(QLearn):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    from tqdm import tqdm
 
     n = 25
     fileName = "data/WING22/WING22_60min_OLHCV.csv"
     initInvest = 5600*5
 
     saved = {
-        "histTradePLs": [],
-        "cumTradePLs": [],
-        "sumTradePLs": [],
+        "TDErrors": [],
         "histRprime": [],
+        "sumTradePLs": [],
         "meanSumTradePLs": []
     }
 
-    histTradePLs = []
-    meanPL = []
-
-    for seed in range(1, 101):
+    for seed in tqdm(range(1, 101)):
         env = Environment(
             n=n,
             fileName=fileName,
@@ -605,41 +600,17 @@ if __name__ == '__main__':
             env=env,
             n=n,
             initInvest=initInvest,
-            eta=0.1,
-            gamma=0.9,
-            initType="uniform01",
-            rewardType="mean",
-            basisFctType="sigmoid",
-            typeFeatureVector="block",
-            lrScheduler=False,
-            verbose=False,
             seed=seed,
         )
 
         while env.terminal is not True:
             agent.run()
 
-        saved["histTradePLs"].append(env.histTradePLs)
-        saved["cumTradePLs"].append([sum(env.histTradePLs[:i]) for i in range(len(env.histTradePLs))])
+        saved["TDErrors"].append(agent.TDErrors)
         saved["sumTradePLs"].append(sum(env.histTradePLs))
-        plt.plot([0]+[sum(env.histTradePLs[:i]) for i in range(len(env.histTradePLs))])
         saved["histRprime"].append(env.histRprime)
-        # plt.plot([0] + [sum(env.histRprime[:i]) for i in range(len(env.histRprime))])
+        plt.plot(env.histRprime)
     plt.grid()
     plt.show()
 
     saved["meanSumTradePLs"].append(np.mean(saved["sumTradePLs"]))
-
-    # plotting histRprimes
-    n = np.zeros(394)
-    for e in saved["histRprime"]:
-        n += np.array(e)
-        plt.plot(e)
-    plt.grid()
-    plt.show()
-
-    # plotting mean histRprimes
-    n = n/100
-    plt.plot(n)
-    plt.grid()
-    plt.show()

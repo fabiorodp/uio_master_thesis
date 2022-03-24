@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from env import Environment
 from algorithms import SARSA, QLearn, GreedyGQ
+from package.helper import savePythonObject
 
 fileName = "data/WING22/WING22_60min_OLHCV.csv"
 initInvest = 5600 * 5
@@ -16,26 +17,18 @@ params = {
     "rewardType": ["meanDiff", "immediate"],
     "eta": [0.1, 0.01, 0.001, 0.0001],
     "zeta": [0.1, 0.01, 0.001, 0.0001],
-    "gamma": [1, 0.95, 0.9],
+    "gamma": [1, 0.95, 0.90],
     "epsilon": [0.15, 0.1, 0.05],
     "initType": ["uniform01", "zeros"],
     "lrScheduler": [True, False],
     "seed": [i for i in range(1, 101)]
 }
 
-save = {
-    "params": [],
-    "histTradePLs": [],
-    "sumTradePLs": [],
-    "TDErrors": [],
-}
-
 saved = {
     "params": [],
-    "histTradePLs": [],
-    "cumTradePLs": [],
-    "sumTradePLs": [],
+    "TDErrors": [],
     "histRprime": [],
+    "sumTradePLs": [],
     "meanSumTradePLs": []
 }
 
@@ -50,10 +43,11 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                             for f in params["epsilon"]:
                                 for g in params["initType"]:
                                     for h in params["lrScheduler"]:
-                                        saved["params"].append((a, b, c, d,
-                                                                e, f, g, h))
-                                        histTradePLs = []
-                                        cumTradePLs = []
+
+                                        saved["params"].append(
+                                            (agent, a, b, c, d, e, f, g, h))
+
+                                        TDErrors = []
                                         sumTradePLs = []
                                         histRprime = []
 
@@ -85,36 +79,14 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                                             while env.terminal is not True:
                                                 agent.run()
 
-                                            save["params"].append(
-                                                (a, b, c, d, e, f, g, h, i))
-
-                                            save["histTradePLs"].append(
-                                                env.histTradePLs)
-
-                                            save["sumTradePLs"].append(
-                                                sum(env.histTradePLs))
-
-                                            save["TDErrors"].append(
-                                                agent.TDErrors)
-
-                                            histTradePLs.append(
-                                                env.histTradePLs)
-
-                                            cumTradePLs.append(
-                                                [sum(env.histTradePLs[:i])
-                                                 for i in range(
-                                                    len(env.histTradePLs))])
+                                            TDErrors.append(agent.TDErrors)
 
                                             sumTradePLs.append(
                                                 sum(env.histTradePLs))
 
                                             histRprime.append(env.histRprime)
 
-                                        saved["histTradePLs"].append(
-                                            histTradePLs)
-
-                                        saved["cumTradePLs"].append(
-                                            cumTradePLs)
+                                        saved["TDErrors"].append(TDErrors)
 
                                         saved["sumTradePLs"].append(
                                             sumTradePLs)
@@ -131,10 +103,11 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                     for d in params["eta"]:
                         for e in params["gamma"]:
                             for h in params["lrScheduler"]:
-                                saved["params"].append((a, b, c, d,
-                                                        e, h))
-                                histTradePLs = []
-                                cumTradePLs = []
+
+                                saved["params"].append(
+                                    (agent, a, b, c, d, e, h))
+
+                                TDErrors = []
                                 sumTradePLs = []
                                 histRprime = []
 
@@ -165,36 +138,14 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                                     while env.terminal is not True:
                                         agent.run()
 
-                                    save["params"].append(
-                                        (a, b, c, d, e, h, i))
-
-                                    save["histTradePLs"].append(
-                                        env.histTradePLs)
-
-                                    save["sumTradePLs"].append(
-                                        sum(env.histTradePLs))
-
-                                    save["TDErrors"].append(
-                                        agent.TDErrors)
-
-                                    histTradePLs.append(
-                                        env.histTradePLs)
-
-                                    cumTradePLs.append(
-                                        [sum(env.histTradePLs[:i])
-                                         for i in range(
-                                            len(env.histTradePLs))])
+                                    TDErrors.append(agent.TDErrors)
 
                                     sumTradePLs.append(
                                         sum(env.histTradePLs))
 
                                     histRprime.append(env.histRprime)
 
-                                saved["histTradePLs"].append(
-                                    histTradePLs)
-
-                                saved["cumTradePLs"].append(
-                                    cumTradePLs)
+                                saved["TDErrors"].append(TDErrors)
 
                                 saved["sumTradePLs"].append(
                                     sumTradePLs)
@@ -212,10 +163,11 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                         for e in params["gamma"]:
                             for f in params["zeta"]:
                                 for h in params["lrScheduler"]:
-                                    saved["params"].append((a, b, c, d,
-                                                            e, f, h))
-                                    histTradePLs = []
-                                    cumTradePLs = []
+
+                                    saved["params"].append(
+                                        (agent, a, b, c, d, e, f, h))
+
+                                    TDErrors = []
                                     sumTradePLs = []
                                     histRprime = []
 
@@ -247,36 +199,14 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                                         while env.terminal is not True:
                                             agent.run()
 
-                                        save["params"].append(
-                                            (a, b, c, d, e, f, h, i))
-
-                                        save["histTradePLs"].append(
-                                            env.histTradePLs)
-
-                                        save["sumTradePLs"].append(
-                                            sum(env.histTradePLs))
-
-                                        save["TDErrors"].append(
-                                            agent.TDErrors)
-
-                                        histTradePLs.append(
-                                            env.histTradePLs)
-
-                                        cumTradePLs.append(
-                                            [sum(env.histTradePLs[:i])
-                                             for i in range(
-                                                len(env.histTradePLs))])
+                                        TDErrors.append(agent.TDErrors)
 
                                         sumTradePLs.append(
                                             sum(env.histTradePLs))
 
                                         histRprime.append(env.histRprime)
 
-                                    saved["histTradePLs"].append(
-                                        histTradePLs)
-
-                                    saved["cumTradePLs"].append(
-                                        cumTradePLs)
+                                    saved["TDErrors"].append(TDErrors)
 
                                     saved["sumTradePLs"].append(
                                         sumTradePLs)
@@ -287,3 +217,9 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                                         np.mean(sumTradePLs))
 
     print("Complete.")
+
+savePythonObject(
+    pathAndFileName=f"results/{fileName}",
+    pythonObject=saved,
+    savingType="json"
+)

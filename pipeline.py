@@ -7,20 +7,20 @@ from env import Environment
 from algorithms import SARSA, QLearn, GreedyGQ
 from package.helper import savePythonObject
 
-fileName = "data/WINQ21/WINQ21_60min_OLHCV.csv"
+fileName = "data/WINM21/WINM21_60min_OLHCV.csv"
 initInvest = 5600 * 5
 
 params = {
     "rlType": ["SARSA", "QLearn", "GreedyGQ"],
-    "n": [5, 10, 25, 50],
+    "n": [5, 25, 50],
     "basisFctType": ["sigmoid", "sigmoid123", "hypTanh"],
     "rewardType": ["minusMean", "immediate", "mean"],
-    "eta": [0.1, 0.01, 0.001],
-    "zeta": [0.1, 0.01, 0.001],
-    "gamma": [1, 0.95, 0.90],
-    "epsilon": [0.15, 0.1, 0.05],
-    "initType": ["uniform01", "zeros"],
-    "lrScheduler": [0, 100, 200],
+    "eta": [0.1, 0.01],
+    "zeta": [0.1, 0.01],
+    "gamma": [1, 0.95],
+    "epsilon": [0.15, 0.1],
+    "initType": ["uniform01"],
+    "lrScheduler": [0, 100],
     "seed": [i for i in range(1, 51)]
 }
 

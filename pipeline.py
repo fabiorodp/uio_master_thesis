@@ -7,12 +7,12 @@ from env import Environment
 from algorithms import SARSA, QLearn, GreedyGQ
 from package.helper import savePythonObject
 
-fileName = "data/WING22/WING22_60min_OLHCV.csv"
+fileName = "data/WINQ21/WINQ21_60min_OLHCV.csv"
 initInvest = 5600 * 5
 
 params = {
     "rlType": ["SARSA", "QLearn", "GreedyGQ"],
-    "n": [2, 5, 10, 25, 50],
+    "n": [5, 10, 25, 50],
     "basisFctType": ["sigmoid", "sigmoid123", "hypTanh"],
     "rewardType": ["meanDiff", "immediate"],
     "eta": [0.1, 0.01, 0.001],
@@ -20,8 +20,8 @@ params = {
     "gamma": [1, 0.95, 0.90],
     "epsilon": [0.15, 0.1, 0.05],
     "initType": ["uniform01", "zeros"],
-    "lrScheduler": [True, False],
-    "seed": [i for i in range(1, 101)]
+    "lrScheduler": [0, 100, 200],
+    "seed": [i for i in range(1, 51)]
 }
 
 saved = {
@@ -32,9 +32,9 @@ saved = {
     "meanSumTradePLs": []
 }
 
-for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
+for ag in tqdm(params["rlType"], desc="Loading pipeline..."):
 
-    if agent == "SARSA":
+    if ag == "SARSA":
         for a in tqdm(params["n"], desc="Loading n for SARSA..."):
             for b in params["basisFctType"]:
                 for c in params["rewardType"]:
@@ -45,7 +45,7 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                                     for h in params["lrScheduler"]:
 
                                         saved["params"].append(
-                                            (agent, a, b, c, d, e, f, g, h))
+                                            (ag, a, b, c, d, e, f, g, h))
 
                                         TDErrors = []
                                         sumTradePLs = []
@@ -96,7 +96,7 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                                         saved["meanSumTradePLs"].append(
                                             np.mean(sumTradePLs))
 
-    elif agent == "QLearn":
+    elif ag == "QLearn":
         for a in tqdm(params["n"], desc="Loading n for QLearn..."):
             for b in params["basisFctType"]:
                 for c in params["rewardType"]:
@@ -105,7 +105,7 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                             for h in params["lrScheduler"]:
 
                                 saved["params"].append(
-                                    (agent, a, b, c, d, e, h))
+                                    (ag, a, b, c, d, e, h))
 
                                 TDErrors = []
                                 sumTradePLs = []
@@ -155,7 +155,7 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                                 saved["meanSumTradePLs"].append(
                                     np.mean(sumTradePLs))
 
-    elif agent == "GreedyGQ":
+    elif ag == "GreedyGQ":
         for a in tqdm(params["n"], desc="Loading n for GreedyGQ..."):
             for b in params["basisFctType"]:
                 for c in params["rewardType"]:
@@ -165,7 +165,7 @@ for agent in tqdm(params["rlType"], desc="Loading pipeline..."):
                                 for h in params["lrScheduler"]:
 
                                     saved["params"].append(
-                                        (agent, a, b, c, d, e, f, h))
+                                        (ag, a, b, c, d, e, f, h))
 
                                     TDErrors = []
                                     sumTradePLs = []

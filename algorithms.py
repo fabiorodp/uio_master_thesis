@@ -97,7 +97,7 @@ class QLearn:
     def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=0.95,
                  initType="uniform01", rewardType="meanDiff",
                  basisFctType="sigmoid", typeFeatureVector="block",
-                 lrScheduler=False, verbose=False, seed=0):
+                 lrScheduler=0, verbose=False, seed=0):
 
         # agent's variables
         self.env = env
@@ -293,18 +293,9 @@ class QLearn:
             df.index = [self.memory.index.to_list()[-1]]
             self.memoryNablaQ = pd.concat([self.memoryNablaQ, df], axis=0)
 
-    def lrSchedulerFct(self, TDError):
-        if self.lrScheduler is True:
-            if (len(self.TDErrors) >= 10) and \
-                    (abs(TDError) > abs(self.TDErrors[-9])) and \
-                    (abs(TDError) > abs(self.TDErrors[-8])) and \
-                    (abs(TDError) > abs(self.TDErrors[-7])) and \
-                    (abs(TDError) > abs(self.TDErrors[-6])) and \
-                    (abs(TDError) > abs(self.TDErrors[-5])) and \
-                    (abs(TDError) > abs(self.TDErrors[-4])) and \
-                    (abs(TDError) > abs(self.TDErrors[-3])) and \
-                    (abs(TDError) > abs(self.TDErrors[-2])) and \
-                    (abs(TDError) > abs(self.TDErrors[-1])):
+    def lrSchedulerFct(self):
+        if self.lrScheduler != 0:
+            if self.t % self.lrScheduler == 0:
                 self.eta /= 2
 
     def run(self) -> None:
@@ -334,7 +325,7 @@ class QLearn:
         TDError = Rprime - Rline + self.gamma * Qprime - self.Q
 
         # reduce learning rate
-        self.lrSchedulerFct(TDError)
+        self.lrSchedulerFct()
 
         # update weights
         self.w += self.eta * TDError * self.nablaQ
@@ -380,7 +371,7 @@ class SARSA(QLearn):
     def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=1.0,
                  epsilon=0.1, initType="uniform01", rewardType="meanDiff",
                  basisFctType="sigmoid", typeFeatureVector="block",
-                 lrScheduler=True, verbose=False, seed=0):
+                 lrScheduler=0, verbose=False, seed=0):
         super().__init__(env, n, initInvest, eta, gamma, initType,
                          rewardType, basisFctType, typeFeatureVector,
                          lrScheduler, verbose, seed)
@@ -460,7 +451,7 @@ class SARSA(QLearn):
         TDError = Rprime - Rline + self.gamma * Qprime - self.Q
 
         # reducing learning rate
-        self.lrSchedulerFct(TDError)
+        self.lrSchedulerFct()
 
         # update weights
         self.w += self.eta * TDError * self.nablaQ
@@ -507,7 +498,7 @@ class GreedyGQ(QLearn):
     def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=0.95,
                  initType="uniform01", rewardType="meanDiff", zeta=0.01,
                  basisFctType="sigmoid", typeFeatureVector="block",
-                 lrScheduler=False, verbose=False, seed=0):
+                 lrScheduler=0, verbose=False, seed=0):
 
         super().__init__(env, n, initInvest, eta, gamma, initType,
                          rewardType, basisFctType, typeFeatureVector,
@@ -543,7 +534,7 @@ class GreedyGQ(QLearn):
         vartheta = Rprime - Rline + self.gamma * Qprime - self.Q
 
         # reducing learning rate
-        self.lrSchedulerFct(vartheta)
+        self.lrSchedulerFct()
 
         # update weights
         self.w += self.eta * (vartheta * self.nablaQ - self.gamma *
@@ -587,7 +578,7 @@ if __name__ == '__main__':
         "meanSumTradePLs": []
     }
 
-    for seed in tqdm(range(1, 101)):
+    for seed in tqdm(range(1, 501)):
         env = Environment(
             n=n,
             fileName=fileName,
@@ -617,7 +608,24 @@ if __name__ == '__main__':
     for e in saved["histRprime"]:
         mean += np.array(e)
 
-    mean /= 100
+    mean /= 500
     plt.plot(mean)
     plt.grid()
     plt.show()
+
+    import seaborn as sns
+
+    hist = []
+    for i in saved["histRprime"]:
+        hist.append(i[-1])
+
+    sns.displot(hist)
+    plt.show()
+
+    sns.boxplot(hist)
+    plt.show()
+
+    import pandas as pd
+
+    df = pd.Series(hist)
+    df.describe()

@@ -14,7 +14,7 @@ params = {
     "rlType": ["SARSA", "QLearn", "GreedyGQ"],
     "n": [5, 10, 25, 50],
     "basisFctType": ["sigmoid", "sigmoid123", "hypTanh"],
-    "rewardType": ["meanDiff", "immediate"],
+    "rewardType": ["minusMean", "immediate", "mean"],
     "eta": [0.1, 0.01, 0.001],
     "zeta": [0.1, 0.01, 0.001],
     "gamma": [1, 0.95, 0.90],

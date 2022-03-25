@@ -46,10 +46,13 @@ class QLearn:
             r = 0.0 if np.isnan(r) else r
             return r
 
-        elif rewardType == "meanDiff":
+        elif rewardType == "minusMean":
             return np.mean(Gtplus1)
 
         elif rewardType == "immediate":
+            return 0.0
+
+        elif rewardType == "mean":
             return 0.0
 
         else:
@@ -305,7 +308,11 @@ class QLearn:
         self.env.runNext(A=self.A)
         dfPrime = self.env.S
         Sprime = tr.from_numpy(dfPrime.values)
-        Rprime = self.env.histRprime[-1]
+
+        if self.rewardType == "mean":
+            Rprime = np.mean(self.env.histRprime)
+        else:
+            Rprime = self.env.histRprime[-1]
 
         # compute the type of reward needed
         Rline = self.rewardFunction(
@@ -431,7 +438,11 @@ class SARSA(QLearn):
         self.env.runNext(A=self.A)
         dfPrime = self.env.S
         Sprime = tr.from_numpy(dfPrime.values)
-        Rprime = self.env.histRprime[-1]
+
+        if self.rewardType == "mean":
+            Rprime = np.mean(self.env.histRprime)
+        else:
+            Rprime = self.env.histRprime[-1]
 
         # compute the type of reward needed
         Rline = self.rewardFunction(
@@ -514,7 +525,11 @@ class GreedyGQ(QLearn):
         self.env.runNext(A=self.A)
         dfPrime = self.env.S
         Sprime = tr.from_numpy(dfPrime.values)
-        Rprime = self.env.histRprime[-1]
+
+        if self.rewardType == "mean":
+            Rprime = np.mean(self.env.histRprime)
+        else:
+            Rprime = self.env.histRprime[-1]
 
         # compute the type of reward needed
         Rline = self.rewardFunction(

@@ -13,6 +13,7 @@ warnings.filterwarnings('ignore')
 
 
 class Environment:
+    """Class method that reproduces the B3 stock exchange dynamics."""
 
     @staticmethod
     def applyTA(data, freq, std_value=2.0, column_base='close'):

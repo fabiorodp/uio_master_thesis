@@ -3,9 +3,11 @@
 
 import numpy as np
 # import pandas as pd
-# import seaborn as sns
+import seaborn as sns
 import matplotlib.pyplot as plt
-from package.helper import readPythonObjectFromFile
+import pandas as pd
+
+from helper import readPythonObjectFromFile
 
 
 files = [
@@ -135,3 +137,122 @@ meanGains /= 100
 plt.plot(meanGains)
 plt.grid()
 plt.show()
+
+import seaborn as sns
+hist = []
+for i in histGains:
+    hist.append(i[-1])
+
+sns.displot(hist)
+plt.show()
+
+sns.boxplot(hist)
+plt.show()
+
+import pandas as pd
+df = pd.Series(hist)
+df.describe()
+
+# ##########
+sorted_saved = {
+    "params": [],
+    "TDErrors": [],
+    "histRprime": [],
+    "sumTradePLs": [],
+    "meanSumTradePLs": [],
+}
+
+_SARSA = {
+    "n": [],
+    "basisFctType": [],
+    "rewardType": [],
+    "eta": [],
+    "gamma": [],
+    "epsilon": [],
+    "initType": [],
+    "lrScheduler": [],
+    "group": []
+}
+
+for i in range(len(saved["params"])):
+    if ("SARSA" in saved["params"][i]):
+        _SARSA["n"].append(saved["params"][i][1])
+        _SARSA["basisFctType"].append(saved["params"][i][2])
+        _SARSA["rewardType"].append(saved["params"][i][3])
+        _SARSA["eta"].append(saved["params"][i][4])
+        _SARSA["gamma"].append(saved["params"][i][5])
+        _SARSA["epsilon"].append(saved["params"][i][6])
+        _SARSA["initType"].append(saved["params"][i][7])
+        _SARSA["lrScheduler"].append(saved["params"][i][8])
+
+        if saved["meanSumTradePLs"][i] < -1000:
+            _SARSA["group"].append(0)
+
+        elif (saved["meanSumTradePLs"][i] >= -1000) \
+                and (saved["meanSumTradePLs"][i] <= 0):
+            _SARSA["group"].append(1)
+
+        elif (saved["meanSumTradePLs"][i] > 0) \
+                and (saved["meanSumTradePLs"][i] <= 1000):
+            _SARSA["group"].append(2)
+
+        elif (saved["meanSumTradePLs"][i] > 1000):
+            _SARSA["group"].append(3)
+    """
+    sorted_saved["params"].append(saved["params"][i])
+    sorted_saved["TDErrors"].append(saved["TDErrors"][i])
+    sorted_saved["histRprime"].append(saved["histRprime"][i])
+    sorted_saved["sumTradePLs"].append(saved["sumTradePLs"][i])
+    sorted_saved["meanSumTradePLs"].append(saved["meanSumTradePLs"][i])
+    """
+sns.boxplot(sorted_saved["meanSumTradePLs"])
+plt.show()
+
+plt.hist(sorted_saved["meanSumTradePLs"], bins=10)
+plt.show()
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+import pandas as pd
+
+df = pd.get_dummies(pd.DataFrame(_SARSA))
+
+count = df[df["group"]==3]
+plt.hist(count["basisFctType_sigmoid123"])
+plt.show()
+
+X_train, X_test, y_train, y_test = train_test_split(
+    df.drop(["group"], axis=1),
+    _SARSA["group"],
+    test_size=0.2,
+    random_state=1
+)
+
+rf = RandomForestClassifier(n_estimators=500)
+rf.fit(X_train, y_train)
+rf.score(X_test, y_test)
+
+sns.histplot(y_train)
+plt.show()
+
+import plotly.express as px
+from sklearn.decomposition import PCA
+
+features = df.columns.to_list()
+del features[5]
+
+pca = PCA()
+components = pca.fit_transform(df[features])
+labels = {
+    str(i): f"PC {i+1} ({var:.1f}%)"
+    for i, var in enumerate(pca.explained_variance_ratio_ * 100)
+}
+
+fig = px.scatter_matrix(
+    components,
+    labels=labels,
+    dimensions=range(4),
+    color=df["group"]
+)
+fig.update_traces(diagonal_visible=False)
+fig.show()

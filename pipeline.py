@@ -2,14 +2,13 @@
 # E-mail: fabior@uio.no
 
 import numpy as np
-# from numba import jit
 from tqdm import tqdm
-from env import Environment
+from environment import Environment
 from algorithms import SARSA, QLearn, GreedyGQ
-from package.helper import savePythonObject
+from helper import savePythonObject
 
 
-fileName = "data/WINM21/WINM21_60min_OLHCV.csv"
+fileName = "data/WINM21/WINM21_500000ticks_OLHCV.csv"
 initInvest = 5600 * 5
 
 params = {
@@ -225,7 +224,7 @@ for ag in tqdm(params["rlType"], desc="Loading pipeline..."):
 print(f"Complete all.")
 
 savePythonObject(
-    pathAndFileName=f"results/{fileName[12:]}",
+    pathAndFileName=f"results/{fileName[12:-5]}",
     pythonObject=saved,
     savingType="json"
 )

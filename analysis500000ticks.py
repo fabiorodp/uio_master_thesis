@@ -5,18 +5,19 @@ import numpy as np
 # import pandas as pd
 # import seaborn as sns
 import matplotlib.pyplot as plt
-from package.helper import readPythonObjectFromFile
+from helper import readPythonObjectFromFile, mergeResults
 
 
 files = [
-    "results/WING22/saved_sigmoid_WING22_500000ticks.json",
-    "results/WINZ21/saved_sigmoid_WINZ21_500000ticks.json",
-    "results/WINV21/saved_sigmoid_WINV21_500000ticks.json",
-    "results/WINQ21/saved_sigmoid_WINQ21_500000ticks.json",
-    "results/WINM21/saved_sigmoid_WINM21_500000ticks.json",
-    "results/WINJ21/saved_sigmoid_WINJ21_500000ticks.json"
+    "results/WING22/saved_sigmoid_WING22_250000ticks.json",
+    "results/WINZ21/saved_sigmoid_WINZ21_250000ticks.json",
+    "results/WINV21/saved_sigmoid_WINV21_250000ticks.json",
+    "results/WINQ21/saved_sigmoid_WINQ21_250000ticks.json",
+    "results/WINM21/saved_sigmoid_WINM21_250000ticks.json",
+    "results/WINJ21/saved_sigmoid_WINJ21_250000ticks.json"
 ]
 
+# saved = mergeResults(files)
 
 saved_WING22 = readPythonObjectFromFile(
     path=files[0],
@@ -64,7 +65,6 @@ objects = [
     saved_WING22,
     saved_WINZ21,
     saved_WINV21,
-    saved_WINQ21,
     saved_WINM21,
     saved_WINJ21
 ]
@@ -136,3 +136,18 @@ meanGains /= 100
 plt.plot(meanGains)
 plt.grid()
 plt.show()
+
+import seaborn as sns
+hist = []
+for i in histGains:
+    hist.append(i[-1])
+
+sns.displot(hist)
+plt.show()
+
+sns.boxplot(hist)
+plt.show()
+
+import pandas as pd
+df = pd.Series(hist)
+df.describe()

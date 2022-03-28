@@ -4,7 +4,7 @@
 import numpy as np
 import torch as tr
 import pandas as pd
-from env import Environment
+from environment import Environment
 from datetime import datetime
 
 import warnings

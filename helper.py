@@ -8,9 +8,9 @@ import pickle
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-# import seaborn as sns
+import seaborn as sns
 from datetime import datetime
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
 # setting parent directory to be accessed
@@ -224,109 +224,126 @@ def parseIntoTickBars(ticker='WING22', numTicks=15000,
     return dfFinal
 
 
-def mergeResults(files: list) -> dict:
-    """Merging json files containing the pipeline results..."""
+def loadResults(files):
 
-    saved = {
-        "params": [],
-        "numTrades": [],
-        "histRprime": [],
-        "meanPLs": []
-    }
+    objects, gains = [], None
 
-    for file in files:
+    for idx, file in enumerate(files):
 
-        if len(re.findall("WINJ21", file)) != 0:
-            _saved1 = readPythonObjectFromFile(
-                path=file,
-                openingType="json"
-            )
+        temp = readPythonObjectFromFile(
+            path=file,
+            openingType="json"
+        )
 
-        elif len(re.findall("WINM21", file)) != 0:
-            _saved2 = readPythonObjectFromFile(
-                path=file,
-                openingType="json"
-            )
-
-        elif len(re.findall("WINQ21", file)) != 0:
-            _saved3 = readPythonObjectFromFile(
-                path=file,
-                openingType="json"
-            )
-
-        elif len(re.findall("WINV21", file)) != 0:
-            _saved4 = readPythonObjectFromFile(
-                path=file,
-                openingType="json"
-            )
-
-        elif len(re.findall("WINZ21", file)) != 0:
-            _saved5 = readPythonObjectFromFile(
-                path=file,
-                openingType="json"
-            )
-
-        elif len(re.findall("WING22", file)) != 0:
-            _saved6 = readPythonObjectFromFile(
-                path=file,
-                openingType="json"
-            )
-
-        else:
-            raise ValueError(f"ERROR: Link {file} not found!")
-
-    ord = (
-        _saved1,
-        _saved2,
-        _saved3,
-        _saved4,
-        _saved5,
-        _saved6
-    )
-
-    for idx, o in enumerate(tqdm(ord, desc="Merging results...")):
+        objects.append(temp)
 
         if idx == 0:
-            saved["params"] = ord[idx]["params"]
-            saved["numTrades"] = np.array(
-                [np.mean([len(ee) for ee in e])
-                 for e in ord[idx]["histTradePLs"]
-                 ])
-            saved["histRprime"] = ord[idx]["histRprime"]
-            saved["meanPLs"] = np.array(ord[idx]["meanSumTradePLs"])
-
+            gains = np.array(temp["meanSumTradePLs"])
         else:
-            # ########## appending numTrades
-            saved["numTrades"] = saved["numTrades"] + np.array(
-                [np.mean([len(ee) for ee in e])
-                 for e in ord[idx]["histTradePLs"]
-                 ])
+            gains += np.array(temp["meanSumTradePLs"])
 
-            # ########## fixing histRprime to be able to store
-            # ########## in a continuing and ordered manner
-            l = []
-            for e, e1 in zip(saved["histRprime"], ord[idx]["histRprime"]):
-                arr = np.array(e)
-                arr = arr[:, -1][:, None]
-                arr1 = np.array(e1) - 28000
-                arr1 = arr1 + arr
-                l.append(arr1.tolist())
+    return objects, gains
 
-            # ########## merging previous histRprime with current histRprime
-            merged = [
-                [ee+ee1 for ee, ee1 in zip(e, e1)]
-                for e, e1 in zip(saved["histRprime"], l)
-            ]
-            saved["histRprime"] = merged
 
-            # ########## summing meanPLs
-            saved["meanPLs"] = saved["meanPLs"] + np.array(
-                ord[idx]["meanSumTradePLs"])
+def topWorstBestAndOptimal(top, objects, gains):
 
-    # ########## returning to be list
-    saved["numTrades"] = saved["numTrades"].tolist()
-    saved["meanPLs"] = saved["meanPLs"].tolist()
-    return saved
+    # ########## pick the best combination of hyper-parameters
+    b = np.argsort(gains)
+    c = np.sort(gains)
+
+    # ########## top 10 worst and top 10 best parameters and scores
+    argTopWorst = [a for a in b[:top]]
+    topWorst = {
+        "args": argTopWorst,
+        "params": [[a for a in objects[0]["params"][i]]
+                   for i in argTopWorst],
+        "scores": [a for a in c[:top]]
+    }
+
+    argTopBest = [a for a in b[-top:]]
+    topBest = {
+        "args": argTopBest,
+        "params": [[a for a in objects[0]["params"][i]]
+                   for i in argTopBest],
+        "scores": [a for a in c[-top:]]
+    }
+
+    return topWorst, topBest
+
+
+def getOptimal(objects, gains, optimalID=-1):
+
+    # ########## pick the best combination of hyper-parameters
+    b = np.argsort(gains)
+    c = np.sort(gains)
+
+    # ########## get the optimal hyper-parameters and its results
+    argBest = int(b[optimalID])
+
+    optimal = {
+        "params": objects[0]["params"][argBest],
+        "arg": int(argBest),
+        "histRprime": np.array(objects[0]["histRprime"][argBest]),
+        "meanPL": c[optimalID]
+    }
+
+    # ########## merge the histRprime trajectories
+    for obt in objects[1:]:
+        lastCol = optimal["histRprime"][:, -1][:, None]
+        arr1 = np.array(obt["histRprime"][optimal["arg"]]) - 28000 + lastCol
+        arr1 = np.hstack([optimal["histRprime"], arr1])
+        optimal["histRprime"] = arr1
+
+    return optimal
+
+
+def plotReturnTrajectories(
+        optimal: dict, initInvest: int = 28000,
+        numSeeds: int = 50, showPlot: bool = True) -> None:
+    """Line plot for return trajectories..."""
+
+    plt.plot(optimal["histRprime"].T)
+    plt.axhline(
+        y=initInvest,
+        xmin=0,
+        xmax=optimal["histRprime"].shape[1],
+        color='black',
+        linestyle='dotted',
+        linewidth=5,
+        label=f"Initial investment of {initInvest} points"
+    )
+    plt.title(f"Return ($G_t$) trajectories for {numSeeds} different seeds")
+    plt.xlabel("Trading time-steps")
+    plt.ylabel("Investment balance in points")
+    plt.legend()
+    plt.grid(color='green', linestyle='--', linewidth=0.5)
+    plt.tight_layout()
+    plt.show() if showPlot else None
+
+
+def plotMeanReturnTrajectory(
+        optimal: dict, initInvest: int = 28000, numSeeds: int = 50,
+        showPlot: bool = True) -> None:
+    """Line plot for mean return trajectory..."""
+
+    m = optimal["histRprime"].mean(axis=0)
+    plt.plot(m)
+    plt.axhline(
+        y=initInvest,
+        xmin=0,
+        xmax=m.shape[0],
+        color='black',
+        linestyle='dotted',
+        linewidth=5,
+        label=f"Initial investment of {initInvest} points"
+    )
+    plt.title(f"Mean Return ($G_t$) trajectory for {numSeeds} different seeds")
+    plt.xlabel("Trading time-steps")
+    plt.ylabel("Investment balance in points")
+    plt.legend()
+    plt.grid(color='green', linestyle='--', linewidth=0.5)
+    plt.tight_layout()
+    plt.show() if showPlot else None
 
 
 if __name__ == '__main__':

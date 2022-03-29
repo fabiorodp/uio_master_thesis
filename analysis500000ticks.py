@@ -2,152 +2,89 @@
 # E-mail: fabior@uio.no
 
 import numpy as np
-# import pandas as pd
-# import seaborn as sns
+import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
-from helper import readPythonObjectFromFile, mergeResults
+from helper import readPythonObjectFromFile
+from helper import plotReturnTrajectories, plotMeanReturnTrajectory
 
 
 files = [
-    "results/WING22/saved_sigmoid_WING22_250000ticks.json",
-    "results/WINZ21/saved_sigmoid_WINZ21_250000ticks.json",
-    "results/WINV21/saved_sigmoid_WINV21_250000ticks.json",
-    "results/WINQ21/saved_sigmoid_WINQ21_250000ticks.json",
-    "results/WINM21/saved_sigmoid_WINM21_250000ticks.json",
-    "results/WINJ21/saved_sigmoid_WINJ21_250000ticks.json"
+    "results/WINJ21_500000ticks.json",
+    "results/WINM21_500000ticks.json",
+    # "results/WINQ21_250000ticks.json",
+    # "results/WINV21_250000ticks.json",
+    # "results/WINZ21_250000ticks.json",
+    # "results/WING22_250000ticks.json"
 ]
 
-# saved = mergeResults(files)
-
-saved_WING22 = readPythonObjectFromFile(
+WINJ21 = readPythonObjectFromFile(
     path=files[0],
     openingType="json"
 )
 
-saved_WINZ21 = readPythonObjectFromFile(
+WINM21 = readPythonObjectFromFile(
     path=files[1],
     openingType="json"
 )
 
-saved_WINV21 = readPythonObjectFromFile(
-    path=files[2],
-    openingType="json"
-)
-
-saved_WINQ21 = readPythonObjectFromFile(
-    path=files[3],
-    openingType="json"
-)
-
-saved_WINM21 = readPythonObjectFromFile(
-    path=files[4],
-    openingType="json"
-)
-
-saved_WINJ21 = readPythonObjectFromFile(
-    path=files[5],
-    openingType="json"
-)
-
-gains = np.array(saved_WING22["meanSumTradePLs"]) + \
-        np.array(saved_WINZ21["meanSumTradePLs"]) +  \
-        np.array(saved_WINV21["meanSumTradePLs"]) +  \
-        np.array(saved_WINQ21["meanSumTradePLs"]) +  \
-        np.array(saved_WINM21["meanSumTradePLs"]) +  \
-        np.array(saved_WINJ21["meanSumTradePLs"])
+# ########## pick the best combination of hyper-parameters
+gains = np.array(WINJ21["meanSumTradePLs"]) + \
+        np.array(WINM21["meanSumTradePLs"])
 
 b = np.argsort(gains)
 c = np.sort(gains)
+best = -1
+argBest = int(b[best])
 
-best = b[-1]  # -2 is very good for visualization, -8 has a huge outlier
+# ########## get the optimal hyper-parameters and its results
+optimal = {
+    "params": WINJ21["params"][argBest],
+    "arg": int(argBest),
+    "histRprime": np.array(WINJ21["histRprime"][argBest]),
+    "meanPL": c[best]
+}
 
-objects = [
-    saved_WING22,
-    saved_WINZ21,
-    saved_WINV21,
-    saved_WINM21,
-    saved_WINJ21
-]
+objects = (
+    WINJ21,
+    WINM21
+)
 
-g1 = saved_WINJ21["histRprime"][best]
-g11 = []
-for i in range(len(g1)):
-    g111 = [0]
-    for ii in range(1, len(g1[i])):
-        g111.append(g1[i][ii] - g1[i][ii-1])
-    g11.append(g111)
+# ########## merge the histRprime trajectories
+for obt in objects[1:]:
+    lastCol = optimal["histRprime"][:, -1][:, None]
+    arr1 = np.array(obt["histRprime"][optimal["arg"]]) - 28000 + lastCol
+    arr1 = np.hstack([optimal["histRprime"], arr1])
+    optimal["histRprime"] = arr1
 
-g2 = saved_WINM21["histRprime"][best]
-for i in range(len(g2)):
-    g111 = [0]
-    for ii in range(1, len(g2[i])):
-        g111.append(g2[i][ii] - g2[i][ii-1])
-    g11[i] += g111
+# ########## line plot trajectories
+plotReturnTrajectories(optimal)
 
-g3 = saved_WINQ21["histRprime"][best]
-for i in range(len(g3)):
-    g111 = [0]
-    for ii in range(1, len(g3[i])):
-        g111.append(g3[i][ii] - g3[i][ii-1])
-    g11[i] += g111
+# ########## line plot mean trajectory
+plotMeanReturnTrajectory(optimal)
 
-g4 = saved_WINV21["histRprime"][best]
-for i in range(len(g4)):
-    g111 = [0]
-    for ii in range(1, len(g4[i])):
-        g111.append(g4[i][ii] - g4[i][ii-1])
-    g11[i] += g111
-
-g5 = saved_WINZ21["histRprime"][best]
-for i in range(len(g5)):
-    g111 = [0]
-    for ii in range(1, len(g5[i])):
-        g111.append(g5[i][ii] - g5[i][ii-1])
-    g11[i] += g111
-
-g6 = saved_WING22["histRprime"][best]
-for i in range(len(g6)):
-    g111 = [0]
-    for ii in range(1, len(g6[i])):
-        g111.append(g6[i][ii] - g6[i][ii-1])
-    g11[i] += g111
-
-# ##########
-histGains = []
-for i in range(len(g11)):
-    g111 = [0]
-    for ii in range(1, len(g11[i])):
-        g111.append(sum(g11[i][:ii]))
-    histGains.append(g111)
-
-# ##########
-for gain in histGains:
-    plt.plot(gain)
-
-plt.grid()
+# ########## hist plot distribution of the final returns
+plt.hist(optimal["histRprime"][:, -1], density=True)
+plt.grid(color='green', linestyle='--', linewidth=0.5)
 plt.show()
 
-# ##########
-meanGains = np.zeros(shape=(len(histGains[0]),))
-for e in histGains:
-    meanGains += np.array(e)
+# ########## pie plot counting positive and negative periods
+"""myexplode = [0.2]
+plt.pie(
+    np.sum(optimal["histRprime"][:, -1] >= 28000),
+    labels=[True, False],
+    explode=myexplode,
+    shadow=True
+)
+plt.legend(title="Gains of the trades:")
+plt.show()"""
 
-meanGains /= 100
-plt.plot(meanGains)
-plt.grid()
+# ########## box plot distribution of the final returns
+sns.boxplot(optimal["histRprime"][:, -1])
 plt.show()
 
-import seaborn as sns
-hist = []
-for i in histGains:
-    hist.append(i[-1])
-
-sns.displot(hist)
-plt.show()
-
-sns.boxplot(hist)
-plt.show()
-
-import pandas as pd
-df = pd.Series(hist)
+# ########## descriptive statistics
+df = pd.Series(optimal["histRprime"][:, -1])
 df.describe()
+
+optimal["histRprime"].std(axis=0)

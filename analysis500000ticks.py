@@ -7,55 +7,30 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from helper import readPythonObjectFromFile
 from helper import plotReturnTrajectories, plotMeanReturnTrajectory
-
+from helper import loadResults, topWorstBestAndOptimal, getOptimal
 
 files = [
     "results/WINJ21_500000ticks.json",
     "results/WINM21_500000ticks.json",
-    # "results/WINQ21_250000ticks.json",
-    # "results/WINV21_250000ticks.json",
-    # "results/WINZ21_250000ticks.json",
-    # "results/WING22_250000ticks.json"
+    # "results/WINQ21_500000ticks.json",
+    # "results/WINV21_500000ticks.json",
+    # "results/WINZ21_500000ticks.json",
+    # "results/WING22_500000ticks.json"
 ]
 
-WINJ21 = readPythonObjectFromFile(
-    path=files[0],
-    openingType="json"
+objects, gains = loadResults(files)
+
+topWorst, topBest = topWorstBestAndOptimal(
+    top=20,
+    objects=objects,
+    gains=gains
 )
 
-WINM21 = readPythonObjectFromFile(
-    path=files[1],
-    openingType="json"
+optimal = getOptimal(
+    objects=objects,
+    gains=gains,
+    optimalID=-1
 )
-
-# ########## pick the best combination of hyper-parameters
-gains = np.array(WINJ21["meanSumTradePLs"]) + \
-        np.array(WINM21["meanSumTradePLs"])
-
-b = np.argsort(gains)
-c = np.sort(gains)
-best = -1
-argBest = int(b[best])
-
-# ########## get the optimal hyper-parameters and its results
-optimal = {
-    "params": WINJ21["params"][argBest],
-    "arg": int(argBest),
-    "histRprime": np.array(WINJ21["histRprime"][argBest]),
-    "meanPL": c[best]
-}
-
-objects = (
-    WINJ21,
-    WINM21
-)
-
-# ########## merge the histRprime trajectories
-for obt in objects[1:]:
-    lastCol = optimal["histRprime"][:, -1][:, None]
-    arr1 = np.array(obt["histRprime"][optimal["arg"]]) - 28000 + lastCol
-    arr1 = np.hstack([optimal["histRprime"], arr1])
-    optimal["histRprime"] = arr1
 
 # ########## line plot trajectories
 plotReturnTrajectories(optimal)
@@ -84,7 +59,4 @@ sns.boxplot(optimal["histRprime"][:, -1])
 plt.show()
 
 # ########## descriptive statistics
-df = pd.Series(optimal["histRprime"][:, -1])
-df.describe()
-
-optimal["histRprime"].std(axis=0)
+pd.Series(optimal["histRprime"][:, -1]).describe()

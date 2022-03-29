@@ -59,5 +59,4 @@ sns.boxplot(optimal["histRprime"][:, -1])
 plt.show()
 
 # ########## descriptive statistics
-df = pd.Series(optimal["histRprime"][:, -1])
-df.describe()
+pd.Series(optimal["histRprime"][:, -1]).describe()

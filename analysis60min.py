@@ -7,7 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from helper import readPythonObjectFromFile
 from helper import plotReturnTrajectories, plotMeanReturnTrajectory
-from helper import loadResults, topWorstBestAndOptimal, getOptimal
+from helper import loadResults, topWorstBest, getOptimal
 
 files = [
     "results/WINJ21_60min.json",
@@ -20,7 +20,7 @@ files = [
 
 objects, gains = loadResults(files)
 
-topWorst, topBest = topWorstBestAndOptimal(
+topWorst, topBest = topWorstBest(
     top=20,
     objects=objects,
     gains=gains

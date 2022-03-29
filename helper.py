@@ -245,7 +245,7 @@ def loadResults(files):
     return objects, gains
 
 
-def topWorstBestAndOptimal(top, objects, gains):
+def topWorstBest(top, objects, gains):
 
     # ########## pick the best combination of hyper-parameters
     b = np.argsort(gains)

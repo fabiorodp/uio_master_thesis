@@ -224,7 +224,7 @@ for ag in tqdm(params["rlType"], desc="Loading pipeline..."):
 print(f"Complete all.")
 
 savePythonObject(
-    pathAndFileName=f"results/{fileName[12:-5]}",
+    pathAndFileName=f"results/{fileName[12:-11]}",
     pythonObject=saved,
     savingType="json"
 )

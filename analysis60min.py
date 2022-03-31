@@ -1,13 +1,12 @@
 # Author: Fabio Rodrigues Pereira
 # E-mail: fabior@uio.no
 
-import numpy as np
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-from helper import readPythonObjectFromFile
 from helper import plotReturnTrajectories, plotMeanReturnTrajectory
-from helper import loadResults, topWorstBest, getOptimal, run500times
+from helper import loadResults, plotPies, topWorstBest, getOptimal
+from helper import run500times, optimal500
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
 
 files = [
     "results/WINJ21_60min.json",
@@ -20,6 +19,9 @@ files = [
 
 # ########## load results
 objects, gains = loadResults(files)
+
+# ########## pie plot counting positive and negative periods
+plotPies(objects, gains)
 
 # ########## get top 20 worst and top 20 best
 topWorst, topBest = topWorstBest(
@@ -60,18 +62,15 @@ optimalGreedyGQ = optimal500(objectsGreedyGQ)
 optimalQLearn = optimal500(objectsQLearn)
 optimalSARSA = optimal500(objectsSARSA)
 
-
 # ########## line plot trajectories
 plotReturnTrajectories(optimalGreedyGQ)
 plotReturnTrajectories(optimalQLearn)
 plotReturnTrajectories(optimalSARSA)
 
-
 # ########## line plot mean trajectory
 plotMeanReturnTrajectory(optimalGreedyGQ)
 plotMeanReturnTrajectory(optimalQLearn)
 plotMeanReturnTrajectory(optimalSARSA)
-
 
 # ########## hist plot distribution of the final returns
 plt.hist(optimalGreedyGQ["histRprime"][:, -1], density=True)
@@ -84,17 +83,6 @@ plt.show()
 
 plt.hist(optimalSARSA["histRprime"][:, -1], density=True)
 plt.grid(color='green', linestyle='--', linewidth=0.5)
-plt.show()
-
-# ########## pie plot counting positive and negative periods
-myexplode = [0.2]
-plt.pie(
-    np.sum(optimal["histRprime"][:, -1] >= 28000),
-    labels=[True, False],
-    explode=myexplode,
-    shadow=True
-)
-plt.legend(title="Gains of the trades:")
 plt.show()
 
 # ########## box plot distribution of the final returns

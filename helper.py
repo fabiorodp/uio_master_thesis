@@ -247,6 +247,59 @@ def loadResults(files):
     return objects, gains
 
 
+def plotPies(objects, gains):
+    gainsGreedyGQ = []
+    gainsQLearn = []
+    gainsSARSA = []
+
+    for idx, p in enumerate(objects[0]["params"]):
+        if p[0] == "GreedyGQ":
+            gainsGreedyGQ.append(gains[idx])
+        elif p[0] == "QLearn":
+            gainsQLearn.append(gains[idx])
+        elif p[0] == "SARSA":
+            gainsSARSA.append(gains[idx])
+
+    gs = [
+        gains.tolist(),
+        gainsGreedyGQ,
+        gainsQLearn,
+        gainsSARSA
+    ]
+
+    for idx, g in enumerate(gs):
+        logic = [
+            np.sum(np.array(g) > 5000),
+            np.sum((np.array(g) >= 0) & (np.array(g) <= 5000)),
+            np.sum((np.array(g) >= -5000) & (np.array(g) < 0)),
+            np.sum(np.array(g) < -5000)
+        ]
+
+        plt.pie(
+            logic,
+            labels=["above 5,000", "Between 0 and 5,000",
+                    "Between -5,000 and 0", "below -5,000"],
+            explode=[0.2, 0.1, 0.1, 0.2],
+            shadow=True,
+            autopct=lambda x: f"{x:.2f}%"
+        )
+        plt.legend(bbox_to_anchor=(-0.2, 0.1), loc='upper left',
+                   borderaxespad=0)
+
+        if idx == 0:
+            plt.title("Results among hyper-parameters for all 60min "
+                      "Algorithms.")
+        elif idx == 1:
+            plt.title("Results among hyper-parameters for 60min GreedyGQ.")
+        elif idx == 2:
+            plt.title("Results among hyper-parameters for 60min QLearn")
+        elif idx == 3:
+            plt.title("Results among hyper-parameters for 60min SARSA")
+
+        plt.tight_layout()
+        plt.show()
+
+
 def topWorstBest(top, objects, gains):
 
     # ########## pick the best combination of hyper-parameters
@@ -481,8 +534,10 @@ if __name__ == '__main__':
         out_folder='../data/WING22/'
     )
 
+    """
     savePythonObject(
         pathAndFileName="results/objects500SARSA60min",
         pythonObject=objectsSARSA,
         savingType="json"
     )
+    """

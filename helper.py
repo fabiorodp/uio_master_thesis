@@ -12,6 +12,8 @@ import seaborn as sns
 from datetime import datetime
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+from environment import Environment
+from algorithms import SARSA, QLearn, GreedyGQ
 
 # setting parent directory to be accessed
 # os.chdir('..')
@@ -297,6 +299,118 @@ def getOptimal(objects, gains, optimalID=-1):
     return optimal
 
 
+def run500times(params):
+    files = [
+        "data/WINJ21/WINJ21_60min_OLHCV.csv",
+        "data/WINM21/WINM21_60min_OLHCV.csv",
+        "data/WINQ21/WINQ21_60min_OLHCV.csv",
+        "data/WINV21/WINV21_60min_OLHCV.csv",
+        "data/WINZ21/WINZ21_60min_OLHCV.csv",
+        "data/WING22/WING22_60min_OLHCV.csv",
+    ]
+
+    objects = []
+
+    for file in files:
+
+        saved = {
+            "params": params,
+            "TDErrors": [],
+            "histTradePLs": [],
+            "sumTradePLs": [],
+            "histRprime": [],
+            "meanSumTradePLs": []
+        }
+
+        for seed in tqdm(range(1, 501)):
+            env = Environment(
+                n=params[1],
+                fileName=file,
+                seed=seed,
+            )
+
+            if params[0] == "QLearn":
+                agent = QLearn(
+                    env=env,
+                    n=params[1],
+                    initInvest=5600 * 5,
+                    eta=params[4],
+                    gamma=params[5],
+                    initType="uniform01",
+                    rewardType=params[3],
+                    basisFctType=params[2],
+                    typeFeatureVector="block",
+                    lrScheduler=params[6],
+                    verbose=False,
+                    seed=seed
+                )
+
+            elif params[0] == "GreedyGQ":
+                agent = GreedyGQ(
+                    env=env,
+                    n=params[1],
+                    initInvest=5600 * 5,
+                    eta=params[4],
+                    gamma=params[5],
+                    initType="uniform01",
+                    rewardType=params[3],
+                    zeta=params[6],
+                    basisFctType=params[2],
+                    typeFeatureVector="block",
+                    lrScheduler=params[7],
+                    verbose=False,
+                    seed=seed
+                )
+
+            elif params[0] == "SARSA":
+                agent = SARSA(
+                    env=env,
+                    n=params[1],
+                    initInvest=5600 * 5,
+                    eta=params[4],
+                    gamma=params[5],
+                    epsilon=params[6],
+                    initType=params[7],
+                    rewardType=params[3],
+                    basisFctType=params[2],
+                    typeFeatureVector="block",
+                    lrScheduler=params[8],
+                    verbose=False,
+                    seed=seed
+                )
+
+            while env.terminal is not True:
+                agent.run()
+
+            saved["TDErrors"].append(agent.TDErrors)
+            saved["histTradePLs"].append(env.histTradePLs)
+            saved["sumTradePLs"].append(sum(env.histTradePLs))
+            saved["histRprime"].append(env.histRprime)
+
+        saved["meanSumTradePLs"].append(np.mean(saved["sumTradePLs"]))
+        objects.append(saved)
+
+    return objects
+
+
+def optimal500(objects):
+    optimal = {
+        "params": objects[0]["params"],
+        "histRprime": np.array(objects[0]["histRprime"]),
+        "meanPL": objects[0]["meanSumTradePLs"][0]
+    }
+
+    # ########## merge the histRprime trajectories
+    for obt in objects[1:]:
+        lastCol = optimal["histRprime"][:, -1][:, None]
+        arr1 = np.array(obt["histRprime"]) - 28000 + lastCol
+        arr1 = np.hstack([optimal["histRprime"], arr1])
+        optimal["histRprime"] = arr1
+        optimal["meanPL"] += obt["meanSumTradePLs"][0]
+
+    return optimal
+
+
 def plotReturnTrajectories(
         optimal: dict, initInvest: int = 28000,
         numSeeds: int = 50, showPlot: bool = True) -> None:
@@ -367,10 +481,8 @@ if __name__ == '__main__':
         out_folder='../data/WING22/'
     )
 
-    """
     savePythonObject(
-        pathAndFileName="results/WINQ21/saved_sigmoid_WINQ21_250000ticks",
-        pythonObject=saved,
+        pathAndFileName="results/objects500SARSA60min",
+        pythonObject=objectsSARSA,
         savingType="json"
     )
-    """

@@ -7,7 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from helper import readPythonObjectFromFile
 from helper import plotReturnTrajectories, plotMeanReturnTrajectory
-from helper import loadResults, topWorstBest, getOptimal
+from helper import loadResults, topWorstBest, getOptimal, run500times
 
 files = [
     "results/WINJ21_60min.json",
@@ -18,33 +18,76 @@ files = [
     "results/WING22_60min.json"
 ]
 
+# ########## load results
 objects, gains = loadResults(files)
 
+# ########## get top 20 worst and top 20 best
 topWorst, topBest = topWorstBest(
     top=20,
     objects=objects,
     gains=gains
 )
 
-optimal = getOptimal(
+# ########## get optimal for GreedyGQ (-1), QLearn (-2) and SARSA (-17)
+optimalGreedyGQ = getOptimal(
     objects=objects,
     gains=gains,
     optimalID=-1
 )
 
+optimalQLearn = getOptimal(
+    objects=objects,
+    gains=gains,
+    optimalID=-2
+)
+
+optimalSARSA = getOptimal(
+    objects=objects,
+    gains=gains,
+    optimalID=-17
+)
+
+# ########## save memory
+del files, gains, objects
+
+# ########## run 500 seeds with the optimal parameters
+objectsGreedyGQ = run500times(optimalGreedyGQ["params"])
+objectsQLearn = run500times(optimalQLearn["params"])
+objectsSARSA = run500times(optimalSARSA["params"])
+
+# ########## 500 runs optimal
+optimalGreedyGQ = optimal500(objectsGreedyGQ)
+optimalQLearn = optimal500(objectsQLearn)
+optimalSARSA = optimal500(objectsSARSA)
+
+
 # ########## line plot trajectories
-plotReturnTrajectories(optimal)
+plotReturnTrajectories(optimalGreedyGQ)
+plotReturnTrajectories(optimalQLearn)
+plotReturnTrajectories(optimalSARSA)
+
 
 # ########## line plot mean trajectory
-plotMeanReturnTrajectory(optimal)
+plotMeanReturnTrajectory(optimalGreedyGQ)
+plotMeanReturnTrajectory(optimalQLearn)
+plotMeanReturnTrajectory(optimalSARSA)
+
 
 # ########## hist plot distribution of the final returns
-plt.hist(optimal["histRprime"][:, -1], density=True)
+plt.hist(optimalGreedyGQ["histRprime"][:, -1], density=True)
+plt.grid(color='green', linestyle='--', linewidth=0.5)
+plt.show()
+
+plt.hist(optimalQLearn["histRprime"][:, -1], density=True)
+plt.grid(color='green', linestyle='--', linewidth=0.5)
+plt.show()
+
+plt.hist(optimalSARSA["histRprime"][:, -1], density=True)
 plt.grid(color='green', linestyle='--', linewidth=0.5)
 plt.show()
 
 # ########## pie plot counting positive and negative periods
-"""myexplode = [0.2]
+myexplode = [0.2]
 plt.pie(
     np.sum(optimal["histRprime"][:, -1] >= 28000),
     labels=[True, False],
@@ -52,11 +95,14 @@ plt.pie(
     shadow=True
 )
 plt.legend(title="Gains of the trades:")
-plt.show()"""
-
-# ########## box plot distribution of the final returns
-sns.boxplot(optimal["histRprime"][:, -1])
 plt.show()
 
-# ########## descriptive statistics
-pd.Series(optimal["histRprime"][:, -1]).describe()
+# ########## box plot distribution of the final returns
+sns.boxplot(optimalGreedyGQ["histRprime"][:, -1])
+plt.show()
+
+sns.boxplot(optimalQLearn["histRprime"][:, -1])
+plt.show()
+
+sns.boxplot(optimalSARSA["histRprime"][:, -1])
+plt.show()

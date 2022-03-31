@@ -277,22 +277,25 @@ def plotPies(objects, gains):
 
         plt.pie(
             logic,
-            labels=["above 5,000", "Between 0 and 5,000",
-                    "Between -5,000 and 0", "below -5,000"],
+            labels=["Above 5,000", "Between 0 and 5,000",
+                    "Between -5,000 and 0", "Below -5,000"],
             explode=[0.2, 0.1, 0.1, 0.2],
             shadow=True,
             autopct=lambda x: f"{x:.2f}%"
         )
-        plt.legend(bbox_to_anchor=(-0.2, 0.1), loc='upper left',
+        plt.legend(bbox_to_anchor=(-0.2, 0.1), loc='lower left',
                    borderaxespad=0)
 
         if idx == 0:
             plt.title("Results among hyper-parameters for all 60min "
                       "Algorithms.")
+
         elif idx == 1:
             plt.title("Results among hyper-parameters for 60min GreedyGQ.")
+
         elif idx == 2:
             plt.title("Results among hyper-parameters for 60min QLearn")
+
         elif idx == 3:
             plt.title("Results among hyper-parameters for 60min SARSA")
 

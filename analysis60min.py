@@ -17,11 +17,9 @@ files = [
     "results/WING22_60min.json"
 ]
 
+# #################### results
 # ########## load results
 objects, gains = loadResults(files)
-
-# ########## pie plot counting positive and negative periods
-plotPies(objects, gains)
 
 # ########## get top 20 worst and top 20 best
 topWorst, topBest = topWorstBest(
@@ -30,6 +28,13 @@ topWorst, topBest = topWorstBest(
     gains=gains
 )
 
+# ########## pie plot with "Above 5,000", "Between 0 and 5,000",
+# "Between -5,000 and 0", "Below -5,000" results
+plotPies(objects, gains)
+
+# ####################
+
+# #################### Discussion
 # ########## get optimal for GreedyGQ (-1), QLearn (-2) and SARSA (-17)
 optimalGreedyGQ = getOptimal(
     objects=objects,
@@ -51,6 +56,16 @@ optimalSARSA = getOptimal(
 
 # ########## save memory
 del files, gains, objects
+
+# ########## line plot trajectories
+plotReturnTrajectories(optimalGreedyGQ)
+plotReturnTrajectories(optimalQLearn)
+plotReturnTrajectories(optimalSARSA)
+
+# ########## line plot mean trajectory
+plotMeanReturnTrajectory(optimalGreedyGQ)
+plotMeanReturnTrajectory(optimalQLearn)
+plotMeanReturnTrajectory(optimalSARSA)
 
 # ########## run 500 seeds with the optimal parameters
 objectsGreedyGQ = run500times(optimalGreedyGQ["params"])

@@ -98,7 +98,7 @@ class QLearn:
             raise ValueError(f"ERROR: initType {initType} not recognized!")
 
     def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=0.95,
-                 initType="uniform01", rewardType="meanDiff",
+                 initType="uniform01", rewardType="minusMean",
                  basisFctType="sigmoid", typeFeatureVector="block",
                  lrScheduler=0, verbose=False, seed=0):
 
@@ -376,7 +376,7 @@ class SARSA(QLearn):
             raise ValueError(f"ERROR: initType {initType} not recognized!")
 
     def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=1.0,
-                 epsilon=0.1, initType="uniform01", rewardType="meanDiff",
+                 epsilon=0.1, initType="uniform01", rewardType="minusMean",
                  basisFctType="sigmoid", typeFeatureVector="block",
                  lrScheduler=0, verbose=False, seed=0):
         super().__init__(env, n, initInvest, eta, gamma, initType,
@@ -507,7 +507,7 @@ class GreedyGQ(QLearn):
             raise ValueError(f"ERROR: initType {initType} not recognized!")
 
     def __init__(self, env, n, initInvest=5600*5, eta=0.01, gamma=0.95,
-                 initType="uniform01", rewardType="meanDiff", zeta=0.01,
+                 initType="uniform01", rewardType="minusMean", zeta=0.01,
                  basisFctType="sigmoid", typeFeatureVector="block",
                  lrScheduler=0, verbose=False, seed=0):
 

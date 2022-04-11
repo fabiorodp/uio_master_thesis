@@ -7,8 +7,7 @@ from environment import Environment
 from algorithms import SARSA, QLearn, GreedyGQ
 from helper import savePythonObject
 
-
-fileName = "data/WINM21/WINM21_500000ticks_OLHCV.csv"
+fileName = "data/WING22/WING22_500000ticks_OLHCV.csv"
 initInvest = 5600 * 5
 
 params = {

@@ -9,82 +9,31 @@ import seaborn as sns
 import numpy as np
 
 files = [
-    "results/WINJ21_60min.json",
-    "results/WINM21_60min.json",
-    "results/WINQ21_60min.json",
-    "results/WINV21_60min.json",
-    "results/WINZ21_60min.json",
-    "results/WING22_60min.json"
+    "results/WINJ21/WINJ21_60min.json",
+    "results/WINM21/WINM21_60min.json",
+    "results/WINQ21/WINQ21_60min.json",
+    "results/WINV21/WINV21_60min.json",
+    "results/WINZ21/WINZ21_60min.json",
+    "results/WING22/WING22_60min.json"
 ]
 
-# #################### results
-# ########## load results
-objects, gains = loadResults(files)
-
-# ########## get top 20 worst and top 20 best
-topWorst, topBest = topWorstBest(
-    top=20,
-    objects=objects,
-    gains=gains
-)
-
-# ########## pie plot with "Above 5,000", "Between 0 and 5,000",
-# "Between -5,000 and 0", "Below -5,000" results
-plotPies(objects, gains)
-
-# ####################
-
 # #################### Discussion
-# ########## get optimal for GreedyGQ (-1), QLearn (-2) and SARSA (-17)
-optimalGreedyGQ = getOptimal(
-    objects=objects,
-    gains=gains,
-    optimalID=-1
-)
-
-optimalQLearn = getOptimal(
-    objects=objects,
-    gains=gains,
-    optimalID=-2
-)
-
-optimalSARSA = getOptimal(
-    objects=objects,
-    gains=gains,
-    optimalID=-17
-)
-
-# ########## save memory
-del files, gains, objects
-
-# ########## line plot trajectories
-plotReturnTrajectories(optimalGreedyGQ)
-plotReturnTrajectories(optimalQLearn)
-plotReturnTrajectories(optimalSARSA)
-
-# ########## line plot mean trajectory
-plotMeanReturnTrajectory(optimalGreedyGQ)
-plotMeanReturnTrajectory(optimalQLearn)
-plotMeanReturnTrajectory(optimalSARSA)
-
-# ########## run 500 seeds with the optimal parameters
-objectsGreedyGQ = run500times(optimalGreedyGQ["params"])
-objectsQLearn = run500times(optimalQLearn["params"])
-objectsSARSA = run500times(optimalSARSA["params"])
-
-# ########## 500 runs optimal
+params = ["GreedyGQ", 5, "sigmoid", "minusMean", 0.01, 0.95, 0.1, 200]
+objectsGreedyGQ = run500times(params)
 optimalGreedyGQ = optimal500(objectsGreedyGQ)
-optimalQLearn = optimal500(objectsQLearn)
-optimalSARSA = optimal500(objectsSARSA)
-
-# ########## line plot trajectories
 plotReturnTrajectories(optimalGreedyGQ)
-plotReturnTrajectories(optimalQLearn)
-plotReturnTrajectories(optimalSARSA)
-
-# ########## line plot mean trajectory
 plotMeanReturnTrajectory(optimalGreedyGQ)
+
+params = ["QLearn", 5, "sigmoid", "minusMean", 0.01, 0.95, 0]
+objectsQLearn = run500times(params)
+optimalQLearn = optimal500(objectsQLearn)
+plotReturnTrajectories(optimalQLearn)
 plotMeanReturnTrajectory(optimalQLearn)
+
+params = ["SARSA", 5, "hypTanh", "minusMean", 0.01, 1, 0.1, "zeros", 200]
+objectsSARSA = run500times(params)
+optimalSARSA = optimal500(objectsSARSA)
+plotReturnTrajectories(optimalSARSA)
 plotMeanReturnTrajectory(optimalSARSA)
 
 # ########## hist plot distribution of the final returns

@@ -17,27 +17,6 @@ files = [
     "results/WING22/WING22_500000ticks.json"
 ]
 
-# #################### results
-# ########## load results
-objects, gains = loadResults(files)
-
-# ########## get top 20 worst and top 20 best
-topWorst, topBest = topWorstBest(
-    top=50,
-    objects=objects,
-    gains=gains
-)
-
-# ########## pie plot with "Above 10,000", "Between 0 and 10,000",
-# "Between -10,000 and 0", "Below -10,000" results
-plotPies(
-    objects=objects,
-    gains=gains,
-    border=10000,
-    time_frame="500k ticks"
-)
-
-# ####################
 # #################### Discussion
 params = ["GreedyGQ", 5, "sigmoid123", "minusMean", 0.1, 0.95, 0.1, 200]
 objectsGreedyGQ = run500times(params)
@@ -56,3 +35,26 @@ objectsSARSA = run500times(params)
 optimalSARSA = optimal500(objectsSARSA)
 plotReturnTrajectories(optimalSARSA)
 plotMeanReturnTrajectory(optimalSARSA)
+
+# ########## hist plot distribution of the final returns
+plt.hist(optimalGreedyGQ["histRprime"][:, -1], density=True)
+plt.grid(color='green', linestyle='--', linewidth=0.5)
+plt.show()
+
+plt.hist(optimalQLearn["histRprime"][:, -1], density=True)
+plt.grid(color='green', linestyle='--', linewidth=0.5)
+plt.show()
+
+plt.hist(optimalSARSA["histRprime"][:, -1], density=True)
+plt.grid(color='green', linestyle='--', linewidth=0.5)
+plt.show()
+
+# ########## box plot distribution of the final returns
+sns.boxplot(optimalGreedyGQ["histRprime"][:, -1])
+plt.show()
+
+sns.boxplot(optimalQLearn["histRprime"][:, -1])
+plt.show()
+
+sns.boxplot(optimalSARSA["histRprime"][:, -1])
+plt.show()

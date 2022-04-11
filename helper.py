@@ -247,11 +247,10 @@ def loadResults(files):
     return objects, gains
 
 
-def plotPies(objects, gains):
-    gainsGreedyGQ = []
-    gainsQLearn = []
-    gainsSARSA = []
+def plotPies(objects, gains, border=5000, time_frame="60 min"):
+    """Function to pie plot result proportions."""
 
+    gainsGreedyGQ, gainsQLearn, gainsSARSA = [], [], []
     for idx, p in enumerate(objects[0]["params"]):
         if p[0] == "GreedyGQ":
             gainsGreedyGQ.append(gains[idx])
@@ -269,16 +268,16 @@ def plotPies(objects, gains):
 
     for idx, g in enumerate(gs):
         logic = [
-            np.sum(np.array(g) > 5000),
-            np.sum((np.array(g) >= 0) & (np.array(g) <= 5000)),
-            np.sum((np.array(g) >= -5000) & (np.array(g) < 0)),
-            np.sum(np.array(g) < -5000)
+            np.sum(np.array(g) > border),
+            np.sum((np.array(g) >= 0) & (np.array(g) <= border)),
+            np.sum((np.array(g) >= -border) & (np.array(g) < 0)),
+            np.sum(np.array(g) < -border)
         ]
 
         plt.pie(
             logic,
-            labels=["Above 5,000", "Between 0 and 5,000",
-                    "Between -5,000 and 0", "Below -5,000"],
+            labels=[f"Above {str(border)}", f"Between 0 and {str(border)}",
+                    f"Between -{str(border)} and 0", f"Below -{str(border)}"],
             explode=[0.2, 0.1, 0.1, 0.2],
             shadow=True,
             autopct=lambda x: f"{x:.2f}%"
@@ -287,17 +286,20 @@ def plotPies(objects, gains):
                    borderaxespad=0)
 
         if idx == 0:
-            plt.title("Results among hyper-parameters for all 60min "
-                      "Algorithms.")
+            plt.title(f"Results among hyper-parameters for all {time_frame}"
+                      " Algorithms.")
 
         elif idx == 1:
-            plt.title("Results among hyper-parameters for 60min GreedyGQ.")
+            plt.title(f"Results among hyper-parameters for {time_frame}"
+                      f" GreedyGQ.")
 
         elif idx == 2:
-            plt.title("Results among hyper-parameters for 60min QLearn")
+            plt.title(f"Results among hyper-parameters for {time_frame}"
+                      f" QLearn")
 
         elif idx == 3:
-            plt.title("Results among hyper-parameters for 60min SARSA")
+            plt.title(f"Results among hyper-parameters for {time_frame}"
+                      f" SARSA")
 
         plt.tight_layout()
         plt.show()

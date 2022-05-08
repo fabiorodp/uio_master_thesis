@@ -1,173 +1,158 @@
 # Author: Fabio Rodrigues Pereira
 # E-mail: fabior@uio.no
 
+import os
+import re
 import numpy as np
 from tqdm import tqdm
 from environment import Environment
 from algorithms import SARSA, QLearn, GreedyGQ
 from helper import savePythonObject
 
-fileName = "data/WING22/WING22_500000ticks_OLHCV.csv"
-initInvest = 5600 * 5
 
-params = {
-    "rlType": ["SARSA", "QLearn", "GreedyGQ"],
-    "n": [5, 25, 50],
-    "basisFctType": ["sigmoid", "sigmoid123", "hypTanh"],
-    "rewardType": ["minusMean", "immediate", "mean"],
-    "eta": [0.1, 0.01],
-    "zeta": [0.1, 0.01],
-    "gamma": [1, 0.95],
-    "epsilon": [0.15, 0.1],
-    "initType": ["uniform01", "zeros"],
-    "lrScheduler": [0, 200],
-    "seed": [i for i in range(1, 51)]
-}
+def pipeline(filePath, initInvest=5600 * 5, params=None, outFolder=None,
+             verbose=True):
+    """
+    This is a function to run the pipeline with hyper-parameters' search.
 
-saved = {
-    "params": [],
-    "TDErrors": [],
-    "histRprime": [],
-    "sumTradePLs": [],
-    "meanSumTradePLs": []
-}
+    Parameters:
+    ===================
 
-for ag in tqdm(params["rlType"], desc="Loading pipeline..."):
+    :param filePath: str:       Input the entire path for the parsed data.
+                                - For example:
+                                "./data/WING22/WING22_500000ticks.csv"
 
-    if ag == "SARSA":
-        for a in tqdm(params["n"], desc="Loading n for SARSA..."):
-            for b in params["basisFctType"]:
-                for c in params["rewardType"]:
-                    for d in params["eta"]:
-                        for e in params["gamma"]:
-                            for f in params["epsilon"]:
-                                for g in params["initType"]:
-                                    for h in params["lrScheduler"]:
+    :param initInvest: float:   The value of the initial investment capital.
+                                - For example: 5600 * 5
 
-                                        saved["params"].append(
-                                            (ag, a, b, c, d, e, f, g, h))
+    :param params: dict:        Dictionary with params to search.
+                                - Attention to the dictionary format,
+                                which must be:
 
-                                        TDErrors = []
-                                        sumTradePLs = []
-                                        histRprime = []
+                                params = {
+                                    "rlType": [],
+                                    "n": [],
+                                    "basisFctType": [],
+                                    "rewardType": [],
+                                    "eta": [],
+                                    "zeta": [],
+                                    "gamma": [],
+                                    "epsilon": [],
+                                    "initType": [],
+                                    "lrScheduler": [],
+                                    "seed": []
+                                }
 
-                                        for i in params["seed"]:
+    :param outFolder: str:      Path to save results.
+                                - If None, the path is
+                                ROOT_DIR+'/'+/results/'.
 
-                                            env = Environment(
-                                                n=a,
-                                                fileName=fileName,
-                                                initInvest=initInvest,
-                                                seed=i
-                                            )
+    :param verbose: bool:       Print all steps of this module.
 
-                                            agent = SARSA(
-                                                env=env,
-                                                n=a,
-                                                initInvest=initInvest,
-                                                eta=d,
-                                                gamma=e,
-                                                epsilon=f,
-                                                initType=g,
-                                                rewardType=c,
-                                                basisFctType=b,
-                                                typeFeatureVector="block",
-                                                lrScheduler=h,
-                                                verbose=False,
-                                                seed=i,
-                                            )
+    Return:
+    ===================
+        This function does not return anything, but only saves a json
+        file with the results.
+    """
+    if params is None:
+        params = {
+            "rlType": ["SARSA", "QLearn", "GreedyGQ"],
+            "n": [5, 25, 50],
+            "basisFctType": ["sigmoid", "sigmoid123", "hypTanh"],
+            "rewardType": ["minusMean", "immediate", "mean"],
+            "eta": [0.1, 0.01],
+            "zeta": [0.1, 0.01],
+            "gamma": [1, 0.95],
+            "epsilon": [0.15, 0.1],
+            "initType": ["uniform01", "zeros"],
+            "lrScheduler": [0, 200],
+            "seed": [i for i in range(1, 51)]
+        }
 
-                                            while env.terminal is not True:
-                                                agent.run()
+    saved = {
+        "params": [],
+        "TDErrors": [],
+        "histRprime": [],
+        "sumTradePLs": [],
+        "meanSumTradePLs": []
+    }
 
-                                            TDErrors.append(agent.TDErrors)
+    for ag in tqdm(params["rlType"], desc="Loading pipeline..."):
 
-                                            sumTradePLs.append(
-                                                sum(env.histTradePLs))
+        if ag == "SARSA":
+            for a in tqdm(params["n"], desc="Loading n for SARSA..."):
+                for b in params["basisFctType"]:
+                    for c in params["rewardType"]:
+                        for d in params["eta"]:
+                            for e in params["gamma"]:
+                                for f in params["epsilon"]:
+                                    for g in params["initType"]:
+                                        for h in params["lrScheduler"]:
 
-                                            histRprime.append(
-                                                env.histRprime)
+                                            saved["params"].append(
+                                                (ag, a, b, c, d, e, f, g, h))
 
-                                        saved["TDErrors"].append(TDErrors)
+                                            TDErrors = []
+                                            sumTradePLs = []
+                                            histRprime = []
 
-                                        saved["sumTradePLs"].append(
-                                            sumTradePLs)
+                                            for i in params["seed"]:
 
-                                        saved["histRprime"].append(
-                                            histRprime)
+                                                env = Environment(
+                                                    n=a,
+                                                    fileName=filePath,
+                                                    initInvest=initInvest,
+                                                    seed=i
+                                                )
 
-                                        saved["meanSumTradePLs"].append(
-                                            np.mean(sumTradePLs))
+                                                agent = SARSA(
+                                                    env=env,
+                                                    n=a,
+                                                    initInvest=initInvest,
+                                                    eta=d,
+                                                    gamma=e,
+                                                    epsilon=f,
+                                                    initType=g,
+                                                    rewardType=c,
+                                                    basisFctType=b,
+                                                    typeFeatureVector="block",
+                                                    lrScheduler=h,
+                                                    verbose=False,
+                                                    seed=i,
+                                                )
 
-    elif ag == "QLearn":
-        for a in tqdm(params["n"], desc="Loading n for QLearn..."):
-            for b in params["basisFctType"]:
-                for c in params["rewardType"]:
-                    for d in params["eta"]:
-                        for e in params["gamma"]:
-                            for h in params["lrScheduler"]:
+                                                while env.terminal is not True:
+                                                    agent.run()
 
-                                saved["params"].append(
-                                    (ag, a, b, c, d, e, h))
+                                                TDErrors.append(agent.TDErrors)
 
-                                TDErrors = []
-                                sumTradePLs = []
-                                histRprime = []
+                                                sumTradePLs.append(
+                                                    sum(env.histTradePLs))
 
-                                for i in params["seed"]:
+                                                histRprime.append(
+                                                    env.histRprime)
 
-                                    env = Environment(
-                                        n=a,
-                                        fileName=fileName,
-                                        initInvest=initInvest,
-                                        seed=i
-                                    )
+                                            saved["TDErrors"].append(TDErrors)
 
-                                    agent = QLearn(
-                                        env=env,
-                                        n=a,
-                                        initInvest=initInvest,
-                                        eta=d,
-                                        gamma=e,
-                                        initType="uniform01",
-                                        rewardType=c,
-                                        basisFctType=b,
-                                        typeFeatureVector="block",
-                                        lrScheduler=h,
-                                        verbose=False,
-                                        seed=i,
-                                    )
+                                            saved["sumTradePLs"].append(
+                                                sumTradePLs)
 
-                                    while env.terminal is not True:
-                                        agent.run()
+                                            saved["histRprime"].append(
+                                                histRprime)
 
-                                    TDErrors.append(agent.TDErrors)
+                                            saved["meanSumTradePLs"].append(
+                                                np.mean(sumTradePLs))
 
-                                    sumTradePLs.append(
-                                        sum(env.histTradePLs))
-
-                                    histRprime.append(env.histRprime)
-
-                                saved["TDErrors"].append(TDErrors)
-
-                                saved["sumTradePLs"].append(
-                                    sumTradePLs)
-
-                                saved["histRprime"].append(histRprime)
-
-                                saved["meanSumTradePLs"].append(
-                                    np.mean(sumTradePLs))
-
-    elif ag == "GreedyGQ":
-        for a in tqdm(params["n"], desc="Loading n for GreedyGQ..."):
-            for b in params["basisFctType"]:
-                for c in params["rewardType"]:
-                    for d in params["eta"]:
-                        for e in params["gamma"]:
-                            for f in params["zeta"]:
+        elif ag == "QLearn":
+            for a in tqdm(params["n"], desc="Loading n for QLearn..."):
+                for b in params["basisFctType"]:
+                    for c in params["rewardType"]:
+                        for d in params["eta"]:
+                            for e in params["gamma"]:
                                 for h in params["lrScheduler"]:
 
                                     saved["params"].append(
-                                        (ag, a, b, c, d, e, f, h))
+                                        (ag, a, b, c, d, e, h))
 
                                     TDErrors = []
                                     sumTradePLs = []
@@ -177,18 +162,17 @@ for ag in tqdm(params["rlType"], desc="Loading pipeline..."):
 
                                         env = Environment(
                                             n=a,
-                                            fileName=fileName,
+                                            fileName=filePath,
                                             initInvest=initInvest,
                                             seed=i
                                         )
 
-                                        agent = GreedyGQ(
+                                        agent = QLearn(
                                             env=env,
                                             n=a,
                                             initInvest=initInvest,
                                             eta=d,
                                             gamma=e,
-                                            zeta=f,
                                             initType="uniform01",
                                             rewardType=c,
                                             basisFctType=b,
@@ -218,12 +202,91 @@ for ag in tqdm(params["rlType"], desc="Loading pipeline..."):
                                     saved["meanSumTradePLs"].append(
                                         np.mean(sumTradePLs))
 
-    print(f"Complete {ag}.")
+        elif ag == "GreedyGQ":
+            for a in tqdm(params["n"], desc="Loading n for GreedyGQ..."):
+                for b in params["basisFctType"]:
+                    for c in params["rewardType"]:
+                        for d in params["eta"]:
+                            for e in params["gamma"]:
+                                for f in params["zeta"]:
+                                    for h in params["lrScheduler"]:
 
-print(f"Complete all.")
+                                        saved["params"].append(
+                                            (ag, a, b, c, d, e, f, h))
 
-savePythonObject(
-    pathAndFileName=f"results/{fileName[12:-11]}",
-    pythonObject=saved,
-    savingType="json"
-)
+                                        TDErrors = []
+                                        sumTradePLs = []
+                                        histRprime = []
+
+                                        for i in params["seed"]:
+
+                                            env = Environment(
+                                                n=a,
+                                                fileName=filePath,
+                                                initInvest=initInvest,
+                                                seed=i
+                                            )
+
+                                            agent = GreedyGQ(
+                                                env=env,
+                                                n=a,
+                                                initInvest=initInvest,
+                                                eta=d,
+                                                gamma=e,
+                                                zeta=f,
+                                                initType="uniform01",
+                                                rewardType=c,
+                                                basisFctType=b,
+                                                typeFeatureVector="block",
+                                                lrScheduler=h,
+                                                verbose=False,
+                                                seed=i,
+                                            )
+
+                                            while env.terminal is not True:
+                                                agent.run()
+
+                                            TDErrors.append(agent.TDErrors)
+
+                                            sumTradePLs.append(
+                                                sum(env.histTradePLs))
+
+                                            histRprime.append(env.histRprime)
+
+                                        saved["TDErrors"].append(TDErrors)
+
+                                        saved["sumTradePLs"].append(
+                                            sumTradePLs)
+
+                                        saved["histRprime"].append(histRprime)
+
+                                        saved["meanSumTradePLs"].append(
+                                            np.mean(sumTradePLs))
+
+        print(f"Complete {ag}.")
+
+    print(f"Complete all.")
+
+    # ########## saving results
+    ROOT_DIR = os.path.abspath(os.curdir)
+
+    if outFolder is None:
+        outFolder = ROOT_DIR+'/'+'/results/'
+
+        if not os.path.isdir(outFolder):
+            os.makedirs(outFolder)
+
+            if verbose:
+                print(f"LOG: Directory {outFolder} created.")
+
+    else:
+        if not os.path.isdir(outFolder):
+            raise ValueError(f"ERROR: The full path for outFolder="
+                             f"'{outFolder}' parameter was not found.")
+
+    fname = re.search(r"\w+/(\w+).csv", filePath).group(1)
+    savePythonObject(
+        pathAndFileName=f"{outFolder}{fname}",
+        pythonObject=saved,
+        savingType="json"
+    )

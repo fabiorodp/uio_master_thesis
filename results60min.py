@@ -1,26 +1,30 @@
 # Author: Fabio Rodrigues Pereira
 # E-mail: fabior@uio.no
 
+import os
 from helper import loadResults, plotPies, topWorstBest
 
+ROOT_DIR = os.path.abspath(os.curdir)
+
 files = [
-    "results/WINJ21/WINJ21_60min.json",
-    "results/WINM21/WINM21_60min.json",
-    "results/WINQ21/WINQ21_60min.json",
-    "results/WINV21/WINV21_60min.json",
-    "results/WINZ21/WINZ21_60min.json",
-    "results/WING22/WING22_60min.json"
+    f"{ROOT_DIR}/results/WINJ21_60min.json",
+    f"{ROOT_DIR}/results/WINM21_60min.json",
+    f"{ROOT_DIR}/results/WINQ21_60min.json",
+    f"{ROOT_DIR}/results/WINV21_60min.json",
+    f"{ROOT_DIR}/results/WINZ21_60min.json",
+    f"{ROOT_DIR}/results/WING22_60min.json"
 ]
 
 # #################### results
 # ########## load results
-objects, gains = loadResults(files)
+objects, gains = loadResults(files=files, verbose=True)
 
 # ########## get top 20 worst and top 20 best
 topWorst, topBest = topWorstBest(
     top=20,
     objects=objects,
-    gains=gains
+    gains=gains,
+    verbose=True
 )
 
 # ########## pie plot with "Above 5,000", "Between 0 and 5,000",

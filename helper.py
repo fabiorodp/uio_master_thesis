@@ -15,76 +15,78 @@ import plotly.graph_objects as go
 from environment import Environment
 from algorithms import SARSA, QLearn, GreedyGQ
 
-# setting parent directory to be accessed
-# os.chdir('..')
 
-
-def savePythonObject(pathAndFileName: str, pythonObject,
-                     savingType: str = "pickle") -> None:
-    """Function to save a python's object to a file..."""
-    if savingType == "pickle":
-        f = open(pathAndFileName, "wb")
-        pickle.dump(pythonObject, f)
-
-    elif savingType == "json":
-        savedJson = json.dumps(pythonObject)
-        f = open(f"{pathAndFileName}.json", "w")
-        f.write(savedJson)
-
-    else:
-        raise ValueError(f"Error: savingType = {savingType} not recognized!")
-
-
-def readPythonObjectFromFile(path: str, openingType: str = "pickle"):
-    """Function to read a file and convert to python's objects..."""
-    if openingType == "pickle":
-        with open(path, 'rb') as f:
-            saved = pickle.load(f)
-        return saved
-
-    elif openingType == "json":
-        with open(path, 'r') as f:
-            saved = f.read()
-        return json.loads(saved)
-
-    else:
-        raise ValueError(f"Error: openingType = {openingType} not recognized!")
-
-
-def plottingCandlestickChart(OHLCV: pd.DataFrame) -> None:
-    """Plotting candlestick chart for OHLCV DataFrame..."""
-    fig = go.Figure(
-        data=[go.Candlestick(
-            x=OHLCV.index,
-            open=OHLCV['open'],
-            high=OHLCV['high'],
-            low=OHLCV['low'],
-            close=OHLCV['close'])
-        ]
-    )
-    fig.show()
-
-
-def getAnAsset(ticker='PETR4', in_folder='data/', out_folder='data/'):
+def getAnAsset(ticker='WINJ21', in_folder=None, out_folder=None,
+               verbose=True):
     """
     This is a function to extract all negotiations of a ticker.
+
     Parameters:
     ===================
-    :param ticker: str: The financial security symbol.
-    :param in_folder: str: The Path where the data files are stored.
-    :param out_folder: str: The Path where the CSV data file will be stored.
+    :param ticker: str:         The financial security symbol.
+
+    :param in_folder: str:      The full path where the data files are stored.
+                                - If None, the full path will be
+                                ROOT_DIR+'/'+'data/'+ticker+'/raw/'
+
+    :param out_folder: str:     The full Path where the CSV data file
+                                will be stored.
+
+    :param verbose: bool:       Print all steps of this module.
+
     Return:
     ===================
-    It does not return anything, only saves the filtered data by the
-    given security ticker.
+        It does not return anything, only saves the extracted data for the
+        given ticker.
     """
+    # ########## Managing directories' paths
+    ROOT_DIR = os.path.abspath(os.curdir)
+
+    if in_folder is None:
+        in_folder = ROOT_DIR+'/'+'data/'+ticker+'/raw/'
+
+        if not os.path.isdir(in_folder):
+            raise ValueError(f"ERROR: The full path for in_folder="
+                             f"'{in_folder}' parameter was not found.")
+
+        if len(os.listdir(in_folder)) == 0:
+            raise ValueError(f"ERROR: Directory in_folder={in_folder}"
+                             f" is empty.")
+    else:
+        if not os.path.isdir(in_folder):
+            raise ValueError(f"ERROR: The full path for in_folder="
+                             f"'{in_folder}' parameter was not found.")
+
+    if out_folder is None:
+        out_folder = ROOT_DIR+'/'+'data/'+ticker+'/extracted/'
+
+        if not os.path.isdir(out_folder):
+            os.makedirs(out_folder)
+            if verbose:
+                print(f"LOG: Directory {out_folder} created.")
+    else:
+        if not os.path.isdir(out_folder):
+            raise ValueError(f"ERROR: The full path for out_folder="
+                             f"'{out_folder}' parameter was not found.")
+    # ##########
+
+    # ########## Iterating over a directory
     for filename in os.listdir(in_folder):
-        print(filename)
+
+        if verbose:
+            print(f"Extracting {ticker} from {filename}...")
+
         if filename.endswith(".zip") and \
                 filename.startswith('TradeIntraday_'):
+
             # importing data-set file
-            data = pd.read_csv(in_folder + filename, compression='zip',
-                               sep=';', header=0, dtype=str)
+            data = pd.read_csv(
+                in_folder + filename,
+                compression='zip',
+                sep=';',
+                header=0,
+                dtype=str
+            )
 
             # removing trades that were not for the selected ticker
             drop_idxs = data['TckrSymb'][data['TckrSymb'] != ticker].index
@@ -106,8 +108,10 @@ def getAnAsset(ticker='PETR4', in_folder='data/', out_folder='data/'):
             data.drop(['NtryTm', 'TradDt'], axis=1, inplace=True)
 
             # converting data type
-            data["DateTime"] = pd.to_datetime(data["DateTime"],
-                                              format='%Y-%m-%d %H%M%f')
+            data["DateTime"] = pd.to_datetime(
+                data["DateTime"],
+                format='%Y-%m-%d %H%M%f'
+            )
 
             # replacing "," to "." in price
             data.columns = ["Price", "Volume", "DateTime"]
@@ -121,33 +125,99 @@ def getAnAsset(ticker='PETR4', in_folder='data/', out_folder='data/'):
             data.reset_index(inplace=True, drop='index')
 
             # creating csv data file
+            fname = re.search(
+                r'TradeIntraday_(\d\d\d\d\d\d\d\d)_1.zip',
+                filename
+            ).group(1)
+
+            fname = ticker + "_" + fname + ".csv"
+
             data.to_csv(
-                f'{out_folder}/{ticker}_{filename[14:-6]}.csv', sep=';',
-                index_label=False)
+                f"{out_folder+'/'+fname}",
+                sep=';',
+                index_label=False
+            )
+    # ##########
+    savedFiles = []
+    for i in os.listdir(out_folder):
+        if i.startswith(ticker) and i.endswith(".csv"):
+            savedFiles.append(i)
+
+    if verbose:
+        print(f"The list of files {savedFiles} was saved "
+              f"in {out_folder}.")
+        print("Extraction done.")
 
 
-def parseIntoTimeBars(ticker='PETR4', candles_periodicity='1D',
-                      in_folder='data/', out_folder=None):
+def parseIntoTimeBars(ticker='WINJ21', candles_periodicity='1D',
+                      in_folder=None, out_folder=None,
+                      verbose=True):
     """
-    This is a function to create candles data based on the ticker
+    This is a function to create time candles (framed intervals) data
+    based on a given ticker/contract/asset.
+
     Parameters:
     ===================
-    :param ticker: str: The financial instrument ticker. Default: 'PETR4'.
-    :param candles_periodicity: str: Periodicity of the candle. Default
-                                     '1D' that means 1 day. Options: 'xmin'
-                                     where x is the number of minutes.
-    :param in_folder: str: The folder where the data file containing all
-                           negotiations of the ticker is stored.
-    :param out_folder: str: The Path where the CSV data file will be stored.
+    :param ticker: str:                 The financial instrument (ticker).
+                                        Default: 'WINJ21'.
+
+    :param candles_periodicity: str:    Periodicity of the candle. Default
+                                        '1D' that means 1 day.
+                                        Options: 'xmin' where x is the
+                                        number of minutes.
+
+    :param in_folder: str:              The folder where the data file
+                                        containing all negotiations of
+                                        the ticker is stored.
+                                        - If None, the full path will be
+                                        ROOT_DIR+'/'+'data/'+ticker+'/extracted/'
+
+    :param out_folder: str:             The Path where the CSV data file
+                                        will be stored.
+                                        - If None, the full path will be
+                                        ROOT_DIR+'/'+'data/'+ticker+'/'
+
+    :param verbose: bool:               Print all steps of this module.
+
     Return:
     ===================
-    :returns data: pd.DataFrame: DataFrame containing the OLHCV data for
-                                 the given ticker and periodicity.
-    """
-    data = pd.DataFrame()
+    It saves the parsed data for the given ticker.
 
+    :returns data: pd.DataFrame:        DataFrame containing the OLHCV
+                                        data for the given ticker and
+                                        periodicity.
+    """
+    # ########## Managing directories' paths
+    ROOT_DIR = os.path.abspath(os.curdir)
+
+    if in_folder is None:
+        in_folder = ROOT_DIR + '/' + 'data/' + ticker + '/extracted/'
+
+        if not os.path.isdir(in_folder):
+            raise ValueError(f"ERROR: The full path for in_folder="
+                             f"'{in_folder}' parameter was not found.")
+
+        if len(os.listdir(in_folder)) == 0:
+            raise ValueError(f"ERROR: Directory in_folder={in_folder}"
+                             f" is empty.")
+    else:
+        if not os.path.isdir(in_folder):
+            raise ValueError(f"ERROR: The full path for in_folder="
+                             f"'{in_folder}' parameter was not found.")
+
+    if out_folder is None:
+        out_folder = ROOT_DIR + '/' + 'data/' + ticker + '/'
+
+    if not os.path.isdir(out_folder):
+        raise ValueError(f"ERROR: The full path for out_folder="
+                         f"'{out_folder}' parameter was not found.")
+    # ##########
+
+    data = pd.DataFrame()
     for file in os.listdir(in_folder):
-        print(file)
+
+        if verbose:
+            print(f"Parsing {ticker} from {file}...")
 
         if file.endswith(".csv") and file.startswith(f'{ticker}'):
             df = pd.read_csv(in_folder + file, sep=';')
@@ -161,20 +231,97 @@ def parseIntoTimeBars(ticker='PETR4', candles_periodicity='1D',
     data.dropna(inplace=True)
 
     # creating csv data file
-    if out_folder is not None:
-        data.to_csv(
-            f'{out_folder}{ticker}_{candles_periodicity}_OLHCV.csv', sep=';',
-            index_label=False)
+    fname = ticker + "_" + candles_periodicity + ".csv"
+
+    data.to_csv(
+        f"{out_folder + '/' + fname}",
+        sep=';',
+        index_label=False
+    )
+
+    savedFiles = []
+    for i in os.listdir(out_folder):
+        if i.startswith(ticker) \
+                and i.endswith(f"{candles_periodicity +'.csv'}"):
+            savedFiles.append(i)
+
+    if verbose:
+        print(f"The list of files {savedFiles} was saved "
+              f"in {out_folder}.")
+        print("Parsing done.")
 
     return data
 
 
-def parseIntoTickBars(ticker='WING22', numTicks=15000,
-                      in_folder='../data/WING22/CSV/', out_folder=None):
+def parseIntoTickBars(ticker='WING22', numTicks=500000,
+                      in_folder=None, out_folder=None,
+                      verbose=True):
+    """
+    This is a function to create tick candles (framed intervals) data
+    based on a given ticker/contract/asset.
+
+    Parameters:
+    ===================
+    :param ticker: str:             The financial instrument (ticker).
+                                    Default: 'WINJ21'.
+
+    :param numTicks: str:           Periodicity of the candle. Default
+                                    '1D' that means 1 day.
+                                    Options: 'xmin' where x is the
+                                    number of minutes.
+
+    :param in_folder: str:          The folder where the data file
+                                    containing all negotiations of
+                                    the ticker is stored.
+                                    - If None, the full path will be
+                                    ROOT_DIR+'/'+'data/'+ticker+'/extracted/'
+
+    :param out_folder: str:         The Path where the CSV data file
+                                    will be stored.
+                                    - If None, the full path will be
+                                    ROOT_DIR+'/'+'data/'+ticker+'/'
+
+    :param verbose: bool:           Print all steps of this module.
+
+    Return:
+    ===================
+    It saves the parsed data for the given ticker.
+
+    :returns data: pd.DataFrame:        DataFrame containing the OLHCV
+                                        data for the given ticker and
+                                        periodicity.
+    """
+    # ########## Managing directories' paths
+    ROOT_DIR = os.path.abspath(os.curdir)
+
+    if in_folder is None:
+        in_folder = ROOT_DIR + '/' + 'data/' + ticker + '/extracted/'
+
+        if not os.path.isdir(in_folder):
+            raise ValueError(f"ERROR: The full path for in_folder="
+                             f"'{in_folder}' parameter was not found.")
+
+        if len(os.listdir(in_folder)) == 0:
+            raise ValueError(f"ERROR: Directory in_folder={in_folder}"
+                             f" is empty.")
+    else:
+        if not os.path.isdir(in_folder):
+            raise ValueError(f"ERROR: The full path for in_folder="
+                             f"'{in_folder}' parameter was not found.")
+
+    if out_folder is None:
+        out_folder = ROOT_DIR + '/' + 'data/' + ticker + '/'
+
+    if not os.path.isdir(out_folder):
+        raise ValueError(f"ERROR: The full path for out_folder="
+                         f"'{out_folder}' parameter was not found.")
+    # ##########
 
     data = pd.DataFrame()
     for file in os.listdir(in_folder):
-        print(file)
+
+        if verbose:
+            print(f"Parsing {ticker} from {file}...")
 
         if file.endswith(".csv") and file.startswith(f'{ticker}'):
             df = pd.read_csv(in_folder + file, sep=';')
@@ -218,19 +365,51 @@ def parseIntoTickBars(ticker='WING22', numTicks=15000,
     dfFinal.drop(['DateTime'], axis=1, inplace=True)
 
     # creating csv data file
-    if out_folder is not None:
-        dfFinal.to_csv(
-            f'{out_folder}{ticker}_{numTicks}ticks_OLHCV.csv', sep=';',
-            index_label=False)
+    fname = ticker + "_" + str(numTicks) + "ticks.csv"
+
+    dfFinal.to_csv(
+        path_or_buf=f"{out_folder + '/' + fname}",
+        sep=';',
+        index_label=False
+    )
+
+    savedFiles = []
+    for i in os.listdir(out_folder):
+        if i.startswith(ticker) \
+                and i.endswith(f"{str(numTicks) +'ticks.csv'}"):
+            savedFiles.append(i)
+
+    if verbose:
+        print(f"The list of files {savedFiles} was saved "
+              f"in {out_folder}.")
+        print("Parsing done.")
 
     return dfFinal
 
 
-def loadResults(files):
+def loadResults(files: list, verbose: bool = True):
+    """
+    Module to load results from files.
 
+    Parameters:
+    ===================
+    :param files: list:             Python's list containing all results files.
+
+    :param verbose: bool:           Print all steps of this module.
+
+    Return:
+    ===================
+    :returns objects: list:         Python's object with the saved results.
+
+    :returns gains: np.ndarray:     With the mean gains of each individual
+                                    result.
+    """
     objects, gains = [], None
 
     for idx, file in enumerate(files):
+
+        if verbose:
+            print(f"Reading {file}...")
 
         temp = readPythonObjectFromFile(
             path=file,
@@ -244,12 +423,86 @@ def loadResults(files):
         else:
             gains += np.array(temp["meanSumTradePLs"])
 
+    if verbose:
+        print(f"Loading is done.")
+
     return objects, gains
 
 
-def plotPies(objects, gains, border=5000, time_frame="60 min"):
-    """Function to pie plot result proportions."""
+def topWorstBest(top, objects, gains, verbose: bool = True):
+    """
+    Module to filter the top worst/best results.
 
+    Parameters:
+    ===================
+    :param top: int:                Input the wanted number of top occurrences.
+
+    :param objects: list:           Input the list containing the saved
+                                    results.
+
+    :param gains: np.ndarray:       The mean gains of each individual result.
+
+    :param verbose: bool:           Print all steps of this module.
+
+    Return:
+    ===================
+    :returns objects: list:     Python's object with the results.
+
+    :returns gains: ndarray:    With the mean gains of each individual result.
+    """
+    # ########## pick the best combination of hyper-parameters
+    b = np.argsort(gains)
+    c = np.sort(gains)
+
+    # ########## top 10 worst and top 10 best parameters and scores
+    argTopWorst = [a for a in b[:top]]
+    topWorst = {
+        "args": argTopWorst,
+        "params": [[a for a in objects[0]["params"][i]]
+                   for i in argTopWorst],
+        "scores": [a for a in c[:top]]
+    }
+
+    if verbose:
+        print(f"Top {top} worst scores: {topWorst['scores']}")
+        print(f"Top {top} worst params: {topWorst['params']}")
+
+    argTopBest = [a for a in b[-top:]]
+    topBest = {
+        "args": argTopBest,
+        "params": [[a for a in objects[0]["params"][i]]
+                   for i in argTopBest],
+        "scores": [a for a in c[-top:]]
+    }
+
+    if verbose:
+        print(f"Top {top} best scores: {topBest['scores']}")
+        print(f"Top {top} best params: {topBest['params']}")
+
+    return topWorst, topBest
+
+
+def plotPies(objects, gains, border=5000, time_frame="60 min"):
+    """
+    Function to show pie plots of results.
+
+    Parameters:
+    ===================
+    :param objects: list:           Input the list containing the saved
+                                    results.
+
+    :param gains: np.ndarray:       The mean gains of each individual result.
+
+    :param border: int:             Value used as a pre-defined proportion
+                                    for each pie's division.
+
+    :param time_frame: str:         String with the type of the framed
+                                    intervals.
+
+    Return:
+    ===================
+        This function does not return any object, but only shows the pie plots.
+    """
     gainsGreedyGQ, gainsQLearn, gainsSARSA = [], [], []
     for idx, p in enumerate(objects[0]["params"]):
         if p[0] == "GreedyGQ":
@@ -305,34 +558,53 @@ def plotPies(objects, gains, border=5000, time_frame="60 min"):
         plt.show()
 
 
-def topWorstBest(top, objects, gains):
+def savePythonObject(pathAndFileName: str, pythonObject,
+                     savingType: str = "pickle") -> None:
+    """Function to save a python's object to a file."""
+    if savingType == "pickle":
+        f = open(pathAndFileName, "wb")
+        pickle.dump(pythonObject, f)
 
-    # ########## pick the best combination of hyper-parameters
-    b = np.argsort(gains)
-    c = np.sort(gains)
+    elif savingType == "json":
+        savedJson = json.dumps(pythonObject)
+        f = open(f"{pathAndFileName}.json", "w")
+        f.write(savedJson)
 
-    # ########## top 10 worst and top 10 best parameters and scores
-    argTopWorst = [a for a in b[:top]]
-    topWorst = {
-        "args": argTopWorst,
-        "params": [[a for a in objects[0]["params"][i]]
-                   for i in argTopWorst],
-        "scores": [a for a in c[:top]]
-    }
+    else:
+        raise ValueError(f"Error: savingType = {savingType} not recognized!")
 
-    argTopBest = [a for a in b[-top:]]
-    topBest = {
-        "args": argTopBest,
-        "params": [[a for a in objects[0]["params"][i]]
-                   for i in argTopBest],
-        "scores": [a for a in c[-top:]]
-    }
 
-    return topWorst, topBest
+def readPythonObjectFromFile(path: str, openingType: str = "pickle"):
+    """Function to read a file and convert to python's objects."""
+    if openingType == "pickle":
+        with open(path, 'rb') as f:
+            saved = pickle.load(f)
+        return saved
+
+    elif openingType == "json":
+        with open(path, 'r') as f:
+            saved = f.read()
+        return json.loads(saved)
+
+    else:
+        raise ValueError(f"Error: openingType = {openingType} not recognized!")
+
+
+def plottingCandlestickChart(OHLCV: pd.DataFrame) -> None:
+    """Plotting candlestick chart for OHLCV DataFrame."""
+    fig = go.Figure(
+        data=[go.Candlestick(
+            x=OHLCV.index,
+            open=OHLCV['open'],
+            high=OHLCV['high'],
+            low=OHLCV['low'],
+            close=OHLCV['close'])
+        ]
+    )
+    fig.show()
 
 
 def getOptimal(objects, gains, optimalID=-1):
-
     # ########## pick the best combination of hyper-parameters
     b = np.argsort(gains)
     c = np.sort(gains)
@@ -357,15 +629,26 @@ def getOptimal(objects, gains, optimalID=-1):
     return optimal
 
 
-def run500times(params):
-    files = [
-        "data/WINJ21/WINJ21_60min_OLHCV.csv",
-        "data/WINM21/WINM21_60min_OLHCV.csv",
-        "data/WINQ21/WINQ21_60min_OLHCV.csv",
-        "data/WINV21/WINV21_60min_OLHCV.csv",
-        "data/WINZ21/WINZ21_60min_OLHCV.csv",
-        "data/WING22/WING22_60min_OLHCV.csv",
-    ]
+def run500times(params, timeFramed="60min"):
+    """Module to run 500 times a reinforcement algorithm."""
+    if timeFramed == "60min":
+        files = [
+            "data/WINJ21/WINJ21_60min_OLHCV.csv",
+            "data/WINM21/WINM21_60min_OLHCV.csv",
+            "data/WINQ21/WINQ21_60min_OLHCV.csv",
+            "data/WINV21/WINV21_60min_OLHCV.csv",
+            "data/WINZ21/WINZ21_60min_OLHCV.csv",
+            "data/WING22/WING22_60min_OLHCV.csv",
+        ]
+    elif timeFramed == "500kticks":
+        files = [
+            "data/WINJ21/WINJ21_500000ticks_OLHCV.csv",
+            "data/WINM21/WINM21_500000ticks_OLHCV.csv",
+            "data/WINQ21/WINQ21_500000ticks_OLHCV.csv",
+            "data/WINV21/WINV21_500000ticks_OLHCV.csv",
+            "data/WINZ21/WINZ21_500000ticks_OLHCV.csv",
+            "data/WING22/WING22_500000ticks_OLHCV.csv",
+        ]
 
     objects = []
 
@@ -471,8 +754,9 @@ def optimal500(objects):
 
 def plotReturnTrajectories(
         optimal: dict, initInvest: int = 28000,
-        numSeeds: int = 50, showPlot: bool = True) -> None:
-    """Line plot for return trajectories..."""
+        algoType: str = "GreedyGQ", showPlot: bool = True,
+        timeFramed: str = "60 min") -> None:
+    """Line plot for return trajectories."""
 
     plt.plot(optimal["histRprime"].T)
     plt.axhline(
@@ -484,7 +768,8 @@ def plotReturnTrajectories(
         linewidth=5,
         label=f"Initial investment of {initInvest} points"
     )
-    plt.title(f"Return ($G_t$) trajectories for {numSeeds} different seeds")
+    plt.title(f"Return ($G_t$) trajectories for {algoType} "
+              f"in {timeFramed} intervals.")
     plt.xlabel("Trading time-steps")
     plt.ylabel("Investment balance in points")
     plt.legend()
@@ -494,9 +779,9 @@ def plotReturnTrajectories(
 
 
 def plotMeanReturnTrajectory(
-        optimal: dict, initInvest: int = 28000, numSeeds: int = 50,
-        showPlot: bool = True) -> None:
-    """Line plot for mean return trajectory..."""
+        optimal: dict, initInvest: int = 28000, algoType: str = "GreedyGQ",
+        showPlot: bool = True, timeFramed: str = "60 min") -> None:
+    """Line plot for mean return trajectory."""
 
     m = optimal["histRprime"].mean(axis=0)
     plt.plot(m)
@@ -509,7 +794,8 @@ def plotMeanReturnTrajectory(
         linewidth=5,
         label=f"Initial investment of {initInvest} points"
     )
-    plt.title(f"Mean Return ($G_t$) trajectory for {numSeeds} different seeds")
+    plt.title(f"Mean return trajectory for {algoType} "
+              f"in {timeFramed} intervals.")
     plt.xlabel("Trading time-steps")
     plt.ylabel("Investment balance in points")
     plt.legend()
@@ -518,31 +804,89 @@ def plotMeanReturnTrajectory(
     plt.show() if showPlot else None
 
 
-if __name__ == '__main__':
-    getAnAsset(
-        ticker='WINM21',
-        in_folder='data/WINZ21/',
-        out_folder='data/WINZ21/CSV'
+def plotDist(
+        optimal: dict, initInvest: int = 28000, algoType: str = "GreedyGQ",
+        showPlot: bool = True, timeFramed: str = "60 min") -> None:
+    """Hist plot for final return trajectories."""
+
+    plt.hist(optimal["histRprime"][:, -1], density=True)
+    plt.axvline(
+        x=initInvest,
+        ymin=0,
+        ymax=1,
+        color='black',
+        linestyle='dotted',
+        linewidth=5,
+        label=f"Initial capital of {initInvest} points"
+    )
+    plt.title(f"Return distribution for {algoType} "
+              f"in {timeFramed} intervals.")
+    plt.xlabel("Return in points")
+    plt.ylabel("Frequency")
+    plt.legend()
+    plt.grid(color='green', linestyle='--', linewidth=0.5)
+    plt.tight_layout()
+    plt.show() if showPlot else None
+
+
+def plotBox(
+        optimal: dict, initInvest: int = 28000, algoType: str = "GreedyGQ",
+        showPlot: bool = True, timeFramed: str = "60 min") -> None:
+    """Box and Swarm plot for final return trajectories."""
+
+    sns.boxplot(
+        optimal["histRprime"][:, -1],
+        linewidth=2.5
+    )
+    sns.swarmplot(
+        data=optimal["histRprime"][:, -1],
+        color=".25",
+        orient="h"
     )
 
-    parseIntoTimeBars(
-        ticker='WINZ21',
-        candles_periodicity='60min',
-        in_folder='data/WINZ21/CSV/',
-        out_folder='data/WINZ21/'
+    plt.axvline(
+        x=initInvest,
+        ymin=0,
+        ymax=1,
+        color='black',
+        linestyle='dotted',
+        linewidth=5,
+        label=f"Initial capital of {initInvest} points"
     )
 
-    parseIntoTickBars(
-        ticker='WING22',
-        numTicks=250000,
-        in_folder='../data/WING22/CSV/',
-        out_folder='../data/WING22/'
+    plt.title(f"Final returns for {algoType} "
+              f"in {timeFramed} intervals.")
+    plt.xlabel("Return in points")
+    plt.ylabel(f"Frequency")
+    plt.legend()
+    plt.grid(color='green', linestyle='--', linewidth=0.5)
+    plt.tight_layout()
+    plt.show() if showPlot else None
+
+
+def plotAllBoxes(
+        data, initInvest: int = 28000, showPlot: bool = True) -> None:
+    """Box plot for all final return trajectories of all algorithms."""
+
+    sns.boxplot(
+        data=data,
+        linewidth=2.5,
+        orient='h'
     )
 
-    """
-    savePythonObject(
-        pathAndFileName="results/objects500SARSA60min",
-        pythonObject=objectsSARSA,
-        savingType="json"
+    plt.axvline(
+        x=initInvest,
+        ymin=0,
+        ymax=1,
+        color='black',
+        linestyle='dotted',
+        linewidth=5,
+        label=f"28k points"
     )
-    """
+
+    plt.title(f"Final returns for all seeds of all optimal algorithms.")
+    plt.xlabel("Return in points")
+    plt.legend()
+    plt.grid(color='green', linestyle='--', linewidth=0.5)
+    plt.tight_layout()
+    plt.show() if showPlot else None

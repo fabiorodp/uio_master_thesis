@@ -13,10 +13,14 @@ warnings.filterwarnings('ignore')
 
 
 class Environment:
-    """Class method that reproduces the B3 stock exchange dynamics."""
+    """
+    Class method that reproduces the B3 stock exchange dynamics.
+    """
 
     @staticmethod
     def applyTA(data, freq, std_value=2.0, column_base='close'):
+        """Module to compute some technical analysis metrics."""
+
         data = ema(
             data=data,
             freq=freq,
@@ -39,11 +43,14 @@ class Environment:
 
     @staticmethod
     def ln(currentPrice, previousPrice):
-        """Computing a feature..."""
+        """Computing a feature."""
+
         return np.log(currentPrice / previousPrice)
 
     @staticmethod
     def cleanCurrentTrade():
+        """Clean memory."""
+
         return {
             "time": [],
             "entryPrice": 0,
@@ -52,8 +59,9 @@ class Environment:
             "lnTradePLs": [],
         }
 
-    def __init__(self, n, fileName="data/WING22_1min_OLHCV.csv",
+    def __init__(self, n, fileName="data/WING22/WING22_1min_OLHCV.csv",
                  initInvest=5600*5, seed=0):
+
         # seeding the experiment
         self.seed = seed
         if seed != 0:
@@ -97,6 +105,8 @@ class Environment:
         self.histTradePLs = []
 
     def runNext(self, A):
+        """Run next time-step."""
+
         Sprime = self.data.iloc[: self.n + 1 + self.t, :]  # n=2 + 1 + t=1
         Sprime = self.applyTA(
             data=Sprime,
@@ -114,7 +124,6 @@ class Environment:
         except:
             timePrime = datetime.strptime(Sprime.index[-1],
                                           '%Y-%m-%d %H:%M:%S.%f')
-        # print(timePrime)
 
         if A == -1:  # limit short
             if self.tradeStatus == 0:  # new trade opened
@@ -207,12 +216,16 @@ class Environment:
         self.t += 1
 
     def saveNewTrade(self, timePrime, entryPrice, tradePL, lnTradePL):
+        """Save data in memory."""
+
         self.tradeMemory["time"].append(timePrime)
         self.tradeMemory["entryPrice"] = entryPrice
         self.tradeMemory["currentTradePLs"].append(tradePL)
         self.tradeMemory["lnTradePLs"].append(lnTradePL)
 
     def saveUpdateTrade(self, timePrime, tradePL, lnTradePL):
+        """Save data in memory."""
+
         self.tradeMemory["time"].append(timePrime)
         self.tradeMemory["currentTradePLs"].append(tradePL)
         self.tradeMemory["lnTradePLs"].append(lnTradePL)

@@ -3,25 +3,25 @@
 
 import numpy as np
 import torch as tr
-import pandas as pd
 from datetime import datetime
-from environment import Environment
-
-import warnings
-
-# suppress warnings
-# warnings.filterwarnings('ignore')
 
 
 class QLearn:
+    """
+    Reinforcement Learning algorithm with function approximation
+    and off-policy Q-learning control.
+    """
+
     @staticmethod
     def ln(currentPrice: tr.Tensor, previousPrice: tr.Tensor) -> float:
-        """Computing a feature..."""
+        """Computing a feature by log-return."""
+
         return tr.log(currentPrice / previousPrice).item()
 
     @staticmethod
     def basisFunction(x: float, basisFctType: str = "sigmoid") -> float:
         """Basis function."""
+
         if basisFctType == "sigmoid123":
             a, b, c, d = 2, 1, 10**15, -1
             return (a / (1 + b * np.exp(-c * x))) - d
@@ -41,6 +41,7 @@ class QLearn:
     @staticmethod
     def rewardFunction(Gtplus1, rewardType):
         """Reward function."""
+
         if rewardType == "shapeRatio":
             r = np.mean(Gtplus1) / np.sqrt(np.var(Gtplus1))
             r = 0.0 if np.isnan(r) else r
@@ -63,6 +64,8 @@ class QLearn:
     def verbose(verbose, dfPrimeS, tradeStatus, primeTradeStatus, A, primeA,
                 tau, primeTau, entryPrice, primeTradePL, lnPrimeTradePL,
                 primeR):
+        """Print steps of the algorithm."""
+
         if verbose is True:
             print(f"\nThe prime time is {dfPrimeS.index.to_list()[-1]}.")
             print(f"The prime closed price is {dfPrimeS.iloc[-1, 3]}.")
@@ -79,12 +82,15 @@ class QLearn:
 
     @staticmethod
     def getCurrentDayTime(dataFrame):
+        """Get current date and time."""
+
         currentDayTime = dataFrame.index[-1]
         return datetime.strptime(currentDayTime, '%Y-%m-%d %H:%M:%S')
 
     @staticmethod
     def initWeights(initType, dimensions):
-        """Initializing weight vector..."""
+        """Initializing weight vector."""
+
         if initType == "zeros":
             raise ValueError(f"ERROR: initType {initType} not allowed for "
                              f"off-policy methods!")
@@ -160,6 +166,8 @@ class QLearn:
         self.nablaQ = f
 
     def getBasisVector(self, S, tradeStatus, tradePL):
+        """Generate the basis vector."""
+
         b = tr.zeros((1, self.n + 1), dtype=tr.double)
 
         for i in reversed(range(2, self.n + 2)):
@@ -186,6 +194,8 @@ class QLearn:
         return b
 
     def getFeatureVector(self, S, A, tradeStatus, tradePL):
+        """Generate the future vector."""
+
         b = self.getBasisVector(
             S=S,
             tradeStatus=tradeStatus,
@@ -225,27 +235,31 @@ class QLearn:
                 return b.T
 
     def greedyPolicy(self, S, As, tradeStatus, tradePL):
-            Q, nablaQ = {}, {}
-            for a in As:
-                f = self.getFeatureVector(
-                    S=S,                            # current state
-                    A=a,                            # action t
-                    tradeStatus=tradeStatus,        # tradeStatus
-                    tradePL=tradePL                 # current trade PL
-                )
-                Q[a] = (self.w.T @ f).item()
-                nablaQ[a] = f
+        """ Perform greedy policy."""
 
-            # checking equal Q values for different actions.
-            equalQs = {k: v for k, v in Q.items()
-                       if list(Q.values()).count(v) > 1}
+        Q, nablaQ = {}, {}
+        for a in As:
+            f = self.getFeatureVector(
+                S=S,                            # current state
+                A=a,                            # action t
+                tradeStatus=tradeStatus,        # tradeStatus
+                tradePL=tradePL                 # current trade PL
+            )
+            Q[a] = (self.w.T @ f).item()
+            nablaQ[a] = f
 
-            # if equalQ is detected, do not trade, i.e., select action 0.
-            argmax = max(Q, key=Q.get) if len(equalQs) <= 1 else 0
+        # checking equal Q values for different actions.
+        equalQs = {k: v for k, v in Q.items()
+                   if list(Q.values()).count(v) > 1}
 
-            return argmax, Q[argmax], nablaQ[argmax]
+        # if equalQ is detected, do not trade, i.e., select action 0.
+        argmax = max(Q, key=Q.get) if len(equalQs) <= 1 else 0
+
+        return argmax, Q[argmax], nablaQ[argmax]
 
     def spaceAs(self, tradeStatus):
+        """Filter action space."""
+
         if tradeStatus == -1:
             return [0, 1]
 
@@ -257,6 +271,8 @@ class QLearn:
 
     def saveMemory(self, dfS, tradeStatus, A, primeA, tau, tradePL,
                    primeR, nablaQ):
+        """Save results in memory."""
+
         col = dfS.columns.to_list()
         extCols = ["tradeStatus", "A", "primeA", "tau", "tradePL", "primeR"]
         keys = col+extCols
@@ -297,12 +313,14 @@ class QLearn:
             self.memoryNablaQ = pd.concat([self.memoryNablaQ, df], axis=0)
 
     def lrSchedulerFct(self):
+        """Learning rate scheduler."""
+
         if self.lrScheduler != 0:
             if self.t % self.lrScheduler == 0:
                 self.eta /= 2
 
     def run(self) -> None:
-        """Run computations for the current time-step..."""
+        """Run computations for the current time-step."""
 
         # get environment's information
         self.env.runNext(A=self.A)
@@ -359,10 +377,15 @@ class QLearn:
 
 
 class SARSA(QLearn):
+    """
+    Reinforcement Learning algorithm with function approximation
+    and on-policy SARSA control.
+    """
 
     @staticmethod
     def initWeights(initType, dimensions):
         """Initializing weight vector..."""
+
         if initType == "zeros":
             wVector = tr.zeros((dimensions, 1), dtype=tr.double)
             return wVector
@@ -391,7 +414,8 @@ class SARSA(QLearn):
         self.countRandETrue = 0
 
     def epsilonGreedyPolicy(self, S, As, tradeStatus, tradePL):
-        """Performing the epsilon-greedy policy..."""
+        """Performing the epsilon-greedy policy."""
+
         self.randEpsilon = np.random.uniform(low=0, high=1, size=None)
         if self.epsilon >= self.randEpsilon:
             self.countRandETrue += 1
@@ -432,7 +456,7 @@ class SARSA(QLearn):
             return argmax, Q[argmax], nablaQ[argmax]
 
     def run(self):
-        """Run computations for the current time-step..."""
+        """Run computations for the current time-step."""
 
         # get environment's information
         self.env.runNext(A=self.A)
@@ -489,10 +513,15 @@ class SARSA(QLearn):
 
 
 class GreedyGQ(QLearn):
+    """
+    Reinforcement Learning algorithm with function approximation
+    and off-policy Greedy-GQ control.
+    """
 
     @staticmethod
     def initKappa(initType, dimensions):
-        """Initializing kappa weight vector..."""
+        """Initializing kappa weight vector."""
+
         if initType == "zeros":
             raise ValueError(f"ERROR: initType {initType} not allowed for "
                              f"off-policy methods!")
@@ -519,7 +548,7 @@ class GreedyGQ(QLearn):
         self.kappa = self.initKappa(self.initType, self.d)
 
     def run(self):
-        """Run computations for the current time-step..."""
+        """Run computations for the current time-step."""
 
         # get environment's information
         self.env.runNext(A=self.A)
@@ -577,70 +606,3 @@ class GreedyGQ(QLearn):
         self.Q, self.nablaQ = Qprime, nablaQprime
         self.TDErrors.append(vartheta)
         self.t += 1
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    from tqdm import tqdm
-
-    n = 5
-    fileName = "data/WING22/WING22_60min_OLHCV.csv"
-
-    saved = {
-        "TDErrors": [],
-        "histRprime": [],
-        "sumTradePLs": [],
-        "meanSumTradePLs": []
-    }
-
-    for seed in tqdm(range(1, 501)):
-        env = Environment(
-            n=n,
-            fileName=fileName,
-            seed=seed,
-        )
-
-        agent = GreedyGQ(
-            env=env,
-            n=n,
-            seed=seed
-        )
-
-        while env.terminal is not True:
-            agent.run()
-
-        saved["TDErrors"].append(agent.TDErrors)
-        saved["sumTradePLs"].append(sum(env.histTradePLs))
-        saved["histRprime"].append(env.histRprime)
-        plt.plot(env.histRprime)
-    plt.grid()
-    plt.show()
-
-    saved["meanSumTradePLs"].append(np.mean(saved["sumTradePLs"]))
-
-    # histRprime trajectories mean
-    mean = np.zeros(shape=(len(saved["histRprime"][0]), ))
-    for e in saved["histRprime"]:
-        mean += np.array(e)
-
-    mean /= 500
-    plt.plot(mean)
-    plt.grid()
-    plt.show()
-
-    import seaborn as sns
-
-    hist = []
-    for i in saved["histRprime"]:
-        hist.append(i[-1])
-
-    sns.displot(hist)
-    plt.show()
-
-    sns.boxplot(hist)
-    plt.show()
-
-    import pandas as pd
-
-    df = pd.Series(hist)
-    df.describe()

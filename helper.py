@@ -605,6 +605,7 @@ def plottingCandlestickChart(OHLCV: pd.DataFrame) -> None:
 
 
 def getOptimal(objects, gains, optimalID=-1):
+    """Module to get the optimal model."""
     # ########## pick the best combination of hyper-parameters
     b = np.argsort(gains)
     c = np.sort(gains)
@@ -630,7 +631,7 @@ def getOptimal(objects, gains, optimalID=-1):
 
 
 def run500times(params, timeFramed="60min"):
-    """Module to run 500 times a reinforcement algorithm."""
+    """Module to run 500 times each reinforcement algorithm."""
     if timeFramed == "60min":
         files = [
             "data/WINJ21/WINJ21_60min_OLHCV.csv",
@@ -640,6 +641,7 @@ def run500times(params, timeFramed="60min"):
             "data/WINZ21/WINZ21_60min_OLHCV.csv",
             "data/WING22/WING22_60min_OLHCV.csv",
         ]
+
     elif timeFramed == "500kticks":
         files = [
             "data/WINJ21/WINJ21_500000ticks_OLHCV.csv",
@@ -735,6 +737,7 @@ def run500times(params, timeFramed="60min"):
 
 
 def optimal500(objects):
+    """Module to get the optimal model among 500 models."""
     optimal = {
         "params": objects[0]["params"],
         "histRprime": np.array(objects[0]["histRprime"]),

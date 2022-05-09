@@ -19,7 +19,7 @@ files = [
 # ########## load results
 objects, gains = loadResults(files=files, verbose=True)
 
-# ########## get top 20 worst and top 20 best
+# ########## get top 50 worst and top 50 best
 topWorst, topBest = topWorstBest(
     top=50,
     objects=objects,

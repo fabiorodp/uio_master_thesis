@@ -1,8 +1,11 @@
 # Author: Fabio Rodrigues Pereira
 # E-mail: fabior@uio.no
+import pandas as pd
 
 from helper import plotReturnTrajectories, plotMeanReturnTrajectory
 from helper import run500times, optimal500, plotDist, plotBox
+import pandas as pd
+import numpy as np
 import os
 
 ROOT_DIR = os.path.abspath(os.curdir)
@@ -26,7 +29,7 @@ plotReturnTrajectories(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
 )
 
 plotMeanReturnTrajectory(
@@ -34,7 +37,7 @@ plotMeanReturnTrajectory(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
 )
 
 plotDist(
@@ -42,7 +45,7 @@ plotDist(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
 )
 
 plotBox(
@@ -50,7 +53,7 @@ plotBox(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
 )
 
 params = ["QLearn", 5, "hypTanh", "minusMean", 0.1, 0.95, 200]
@@ -62,7 +65,7 @@ plotReturnTrajectories(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
 )
 
 plotMeanReturnTrajectory(
@@ -70,7 +73,7 @@ plotMeanReturnTrajectory(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
 )
 
 plotDist(
@@ -78,7 +81,7 @@ plotDist(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
 )
 
 plotBox(
@@ -86,7 +89,7 @@ plotBox(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
 )
 
 params = ["SARSA", 5, "hypTanh", "minusMean", 0.1, 1, 0.1, "uniform01", 0]
@@ -98,7 +101,7 @@ plotReturnTrajectories(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
 )
 
 plotMeanReturnTrajectory(
@@ -106,7 +109,7 @@ plotMeanReturnTrajectory(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
 )
 
 plotDist(
@@ -114,7 +117,7 @@ plotDist(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
 )
 
 plotBox(
@@ -122,5 +125,24 @@ plotBox(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="500k ticks"
+    timeFramed="500k--tick"
+)
+
+# ########## saving for combined analysis
+optimals = np.hstack(
+    [
+        optimalGreedyGQ["histRprime"][:, -1].reshape(-1, 1),
+        optimalQLearn["histRprime"][:, -1].reshape(-1, 1),
+        optimalSARSA["histRprime"][:, -1].reshape(-1, 1)
+    ]
+)
+
+optimals = pd.DataFrame(
+    optimals,
+    columns=["GreedyGQ500k--tick", "QLearn500k--tick", "SARSA500k--tick"]
+)
+
+optimals.to_csv(
+    f"{ROOT_DIR}/results/optimals500k--tick.csv",
+    index_label=True
 )

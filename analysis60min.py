@@ -3,6 +3,8 @@
 
 from helper import plotReturnTrajectories, plotMeanReturnTrajectory
 from helper import run500times, optimal500, plotDist, plotBox
+import pandas as pd
+import numpy as np
 import os
 
 ROOT_DIR = os.path.abspath(os.curdir)
@@ -98,7 +100,7 @@ plotReturnTrajectories(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="60 min"
+    timeFramed="60--min"
 )
 
 plotMeanReturnTrajectory(
@@ -106,7 +108,7 @@ plotMeanReturnTrajectory(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="60 min"
+    timeFramed="60--min"
 )
 
 plotDist(
@@ -114,7 +116,7 @@ plotDist(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="60 min"
+    timeFramed="60--min"
 )
 
 plotBox(
@@ -122,5 +124,24 @@ plotBox(
     initInvest=28000,
     algoType=params[0],
     showPlot=True,
-    timeFramed="60 min"
+    timeFramed="60--min"
+)
+
+# ########## saving for combined analysis
+optimals = np.hstack(
+    [
+        optimalGreedyGQ["histRprime"][:, -1].reshape(-1, 1),
+        optimalQLearn["histRprime"][:, -1].reshape(-1, 1),
+        optimalSARSA["histRprime"][:, -1].reshape(-1, 1)
+    ]
+)
+
+optimals = pd.DataFrame(
+    optimals,
+    columns=["Greedy60--min", "QLearn60--min", "SARSA60--min"]
+)
+
+optimals.to_csv(
+    f"{ROOT_DIR}/results/optimals60--min.csv",
+    index_label=True
 )

@@ -574,7 +574,7 @@ def savePythonObject(pathAndFileName: str, pythonObject,
         raise ValueError(f"Error: savingType = {savingType} not recognized!")
 
 
-def readPythonObjectFromFile(path: str, openingType: str = "pickle"):
+def readPythonObjectFromFile(path: str, openingType: str = "json"):
     """Function to read a file and convert to python's objects."""
     if openingType == "pickle":
         with open(path, 'rb') as f:
@@ -631,7 +631,8 @@ def getOptimal(objects, gains, optimalID=-1):
 
 
 def run500times(params, files):
-    """Module to run 500 times each reinforcement algorithm."""
+    """Module to run 500 times each reinforcement algorithm with different
+    seeds."""
 
     objects = []
 
@@ -740,7 +741,7 @@ def optimal500(objects):
 def plotReturnTrajectories(
         optimal: dict, initInvest: int = 28000,
         algoType: str = "GreedyGQ", showPlot: bool = True,
-        timeFramed: str = "60 min") -> None:
+        timeFramed: str = "60--min") -> None:
     """Line plot for return trajectories."""
 
     plt.plot(optimal["histRprime"].T)

@@ -719,7 +719,7 @@ def run500times(params, files):
 
 
 def optimal500(objects):
-    """Module to get the optimal model among 500 models."""
+    """Module to get the most optimal model among 500 models."""
 
     optimal = {
         "params": objects[0]["params"],
@@ -793,7 +793,7 @@ def plotMeanReturnTrajectory(
 def plotDist(
         optimal: dict, initInvest: int = 28000, algoType: str = "GreedyGQ",
         showPlot: bool = True, timeFramed: str = "60 min") -> None:
-    """Hist plot for final return trajectories."""
+    """Hist plot for final return trajectories' values."""
 
     plt.hist(optimal["histRprime"][:, -1], density=True)
     plt.axvline(

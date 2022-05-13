@@ -1,4 +1,4 @@
-# Trading Financial Markets using Reinforcement Learning: Application and Analysis
+# Trading Financial Markets Using Reinforcement Learning: Application and Analysis
 
 #### Author: Fábio Rodrigues Pereira
 #### Master thesis for M.Sc. Computational Science: Applied Mathematics and Risk Analysis.
